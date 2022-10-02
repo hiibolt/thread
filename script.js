@@ -11,9 +11,10 @@ var SYSTEM = {
 		code: {
 			x: 0,
 			y: 300,
-			tabs: ["Entities", "Code", "Item"],
+			tabs: ["Entities", "Code", "Item", "Test"],
 			selectedTab: "Entities",
 			selectedEntity: undefined,
+			playing: false,
 		},
 	},
 }
@@ -37,15 +38,18 @@ class Entity {
 		//Allowing JSONotation to do the heavy lifting of the nested shenanigans
 		this.initialCodeStack = JSON.parse(initialCode);
 		this.updateCodeStack = JSON.parse(updateCode);
+	}
+	initialize() {
 		//De-referencing for to get a mutable version without modifying code permanently
 		this._INITIALCODESTACK = JSON.parse(JSON.stringify(this.initialCodeStack));
-		this._UPDATECODESTACK = JSON.parse(JSON.stringify(this.updateCodeStack));
-
+		
 		//Execute every code statement (ground level, the first blocks)
 		this._INITIALCODESTACK.forEach((item) => { this.EVALUATE_CODE(item); });
 	}
 	update() {
 		/** Don't implement this until you're there **/
+		//De-referencing for to get a mutable version without modifying code permanently
+		//this._UPDATECODESTACK = JSON.parse(JSON.stringify(this.updateCodeStack));
 		//Execute every code statement (ground level, the first blocks)
 		//this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
 	}
@@ -138,7 +142,7 @@ function debugView() {
 
 	fill(255);
 	noStroke();
-	text(SYSTEM.window.debug.msgs.join('\n'), 15, 20, 270);
+	text(SYSTEM.window.debug.msgs.slice(-5).join('\n'), 15, 20, 270);
 	pop();
 }
 
@@ -154,7 +158,6 @@ function setup() {
 	background(255, 0, 0);
 
 	MAIN.entities["Main"] = new Entity({}, {}, '[["setIntVar","Health","100"],["print",["concat","You have ",["getIntVar","Health"]," health"]],["setIntVar","Health",["mult",["getIntVar","Health"],1,23]],["print",["concat","You have ",["getIntVar","Health"]," health"]],["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
-	//MAIN.entities["tempentry"] = "bruh";
 }
 function codeViewTEMP() {
 	fill(55);
@@ -208,7 +211,36 @@ function draw() {
 			scale(1);
 			codeViewTEMP();
 			switch(SYSTEM.window.code.selectedTab){
-				case "Code":MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack.forEach((i,ind)=>{
+				case "Test":
+					if(!SYSTEM.window.code.playing){
+						if(mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 45 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed){
+							SYSTEM.window.code.playing = true;
+							for(let entity in MAIN.entities){
+								MAIN.entities[entity].initialize();
+							}
+						}
+						fill(0,200,0);
+						stroke(0,170,0);
+					}else{
+						fill(200);
+						stroke(170);
+					}
+					triangle(20,50,45,62.5,20,75);
+
+					if(SYSTEM.window.code.playing){
+						if(mouseX > SYSTEM.window.code.x + 60 && mouseX < SYSTEM.window.code.x + 85 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed){
+							SYSTEM.window.code.playing = false;
+						}
+						fill(200,0,0);
+						stroke(170,0,0);
+					}else{
+						fill(200);
+						stroke(170);
+					}
+					rect(60,50,25,25,2);
+					break;
+				case "Code":
+					MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack.forEach((i,ind)=>{
 						fill(255);
 						noStroke();
 						textSize(12);
@@ -245,6 +277,12 @@ function draw() {
 					break;
 			}
 		pop();
+
+		if(SYSTEM.window.code.playing){
+			for(let entity in MAIN.entities){
+				MAIN.entities[entity].update();
+			}
+		}
 	} catch (err) {
 		background(120);
 		fill(255);
