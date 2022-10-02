@@ -1,8 +1,14 @@
 p5.disableFriendlyErrors = true;
+//[temp]
 var MSGROLL = 0;
+var ENTITY1;
+var MAIN = {
+	globalVariables: {},
+	entities: {},
+};
 class Entity {
-	constructor(initialPos,initialRot,initialCode,updateCode) {
-		//Initialize entity position and rotation at time of 
+	constructor(initialPos, initialRot, initialCode, updateCode) {
+		//Initialize variables all entities share
 		this.x = initialPos.x;
 		this.y = initialPos.y;
 		this.z = initialPos.z;
@@ -10,93 +16,107 @@ class Entity {
 		this.rY = initialRot.y;
 		this.rZ = initialRot.z;
 		this.internalVariables = {};
-		this.INITIAL_CODE_STACK = initialCode.split('~~~');
-		for(let i = 0;i < this.INITIAL_CODE_STACK.length;i++){
-			this.EVALUATE_CODE(this.INITIAL_CODE_STACK[i]);
-		}
+
+		//Allowing JSONotation to do the heavy lifting of the nested shenanigans
+		this.INITIAL_CODE_STACK = JSON.parse(initialCode);
+
+		//Execute every code statement (ground level, the first blocks)
+		this.INITIAL_CODE_STACK.forEach((item) => {this.EVALUATE_CODE(item);});
 	}
+	
 	/** INTERNAL FUNCTIONS **/
 	//The execution of the string-based code provide by the user.
-	EVALUATE_CODE(code){
-		let CODE_INFO = code.split('|||');
-		for(let i = 0;i < CODE_INFO.length;i++){
-			if(CODE_INFO[i][0] === '~'){
-				CODE_INFO[i] = EVALUATE_CODE(CODE_INFO[i].substring(1));
+	EVALUATE_CODE(CODE_INFO) {
+		for (let i = 0; i < CODE_INFO.length; i++) {
+			if (Array.isArray(CODE_INFO[i])) {
+				CODE_INFO[i] = this.EVALUATE_CODE(CODE_INFO[i]);
 			}
 		}
-		switch(CODE_INFO[0]){
-			case "setVar": return this.setInternalVariable(CODE_INFO[1],CODE_INFO[2]);
-			case "getVarStr": return this.getInternalVariableAsString(CODE_INFO[1]);
-			case "getVarNum": return this.getInternalVariableAsNum(CODE_INFO[0]);
-			case "print": return printMsg(CODE_INFO[1]);
-			default: throw("Function " + CODE_INFO[0] + " does not exist.\nInfo: " + CODE_INFO);
+		switch (CODE_INFO[0]) {
+			/** Variable manipulation and retrieval **/
+			case "setIntVar":    return this.setInternalVariable(CODE_INFO[1], CODE_INFO[2]);
+			case "getIntVar": return this.getInternalVariable(CODE_INFO[1]);
+
+			/** Operations **/
+			case "concat": return CODE_INFO.slice(1).join('');
+				
+			case "add":    return this.addAll(CODE_INFO.slice(1));
+			case "sub":    return CODE_INFO[1] * 1 - CODE_INFO[2] * 1;
+			case "mult":   return this.multiplyAll(CODE_INFO.slice(1));
+			case "div":    return (CODE_INFO[1] * 1) / (CODE_INFO[2] * 1);
+
+			/** Debug **/
+			case "print": return printMsg(CODE_INFO.slice(1).join(''));
+			default: nonFatalError("Function " + CODE_INFO[0] + " does not exist.\nInfo: " + CODE_INFO);
 		}
 	}
 
 	/** USER FUNCTIONS **/
 	//Sets variable <name> to <value>
-	setInternalVariable(name,value){
-		try{
+	setInternalVariable(name, value) {
+		try {
 			this.internalVariables.name = value;
 			return 0;
-		}catch(err){
+		} catch (err) {
 			nonFatalError("Variable " + name + " does not exist or could not be set");
 			return 1;
 		}
 	}
-	//Returns variable <name> as STRING
-	getInternalVariableAsString(name){
-		if(this.internalVariables.name){
+	//Returns variable <name>
+	getInternalVariable(name) {
+		if (this.internalVariables.name) {
 			return this.internalVariables.name;
-		}else{
+		} else {
 			nonFatalError("Variable " + name + " does not exist or could not be fetched");
 			return 1;
 		}
 	}
-	//Returns variable <name> as NUM
-	getInternalVariableAsNum(name){
-		if(this.internalVariables.name){
-			return this.internalVariables.name * 1;
-		}else{
-			nonFatalError("Variable " + name + " does not exist or could not be fetched");
-			return 1;
-		}
+
+	//Adds all given <numbers> together
+	addAll(numbers) {
+		let ret = 0;
+		numbers.forEach((i) => { ret += i * 1 });
+		return ret;
+	}
+	//Multiplies all given <numbers> together
+	multiplyAll(numbers) {
+		let ret = 1;
+		numbers.forEach((i) => { ret *= i * 1 });
+		return ret;
 	}
 }
-var main = {
-	globalVariables:{},
-	entities:{},
-};
 
-function printMsg(msg){
-	MSGROLL ++;
-	
+function printMsg(msg) {
+	MSGROLL++;
+
 	fill(0);
 	noStroke();
 	textAlign(LEFT);
-	text("Message: " + msg,windowWidth/20,windowHeight/2 + MSGROLL * 10);
+	text("Message: " + msg, windowWidth / 20, windowHeight / 2 + MSGROLL * 10);
 }
-function nonFatalError(msg){
-	fill(0);
+function nonFatalError(msg) {
+	MSGROLL++;
+	
+	fill(255,0,0);
 	noStroke();
-	textAlign(CENTER);
-	text("Warning: "+msg,windowWidth/2,windowHeight/2);
+	textAlign(LEFT);
+	text("Warning: " + msg, windowWidth / 19, windowHeight / 2 + MSGROLL * 10);
 }
-function setup(){
-	createCanvas(windowWidth,windowHeight);
-	background(0,255,0);
+function setup() {
+	createCanvas(windowWidth, windowHeight);
+	background(0, 255, 0);
 }
-var entity1;
-function draw(){
-	try{
-		if(!entity1){
-			entity1 = new Entity({},{},"setVar|||health|||100~~~print|||~getVarStr","");
+function draw() {
+	try {
+		if (!ENTITY1) {
+			ENTITY1 = new Entity({}, {}, '[["setIntVar","Health","100"],["print",["concat","You have ",["getIntVar","Health"]," health"]],["setIntVar","Health",["mult",["getIntVar","Health"],1,23]],["print",["concat","You have ",["getIntVar","Health"]," health"]],["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "");
+			//printMsg(JSON.parse('[["setVar","Health","100"],["print","hello world"]]')[0]);
 		}
-	}catch(err){
+	} catch (err) {
 		background(120);
 		fill(255);
 		textAlign(CENTER);
-		text("FATAL ERROR:\n" + err,windowWidth/2,windowHeight/2);
+		text("FATAL ERROR:\n" + err, windowWidth / 2, windowHeight / 2);
 	}
 }
 //   John W
