@@ -1,0 +1,12 @@
+html, body {
+  height: 100%;
+  width: 100%;
+}
+canvas {
+  margin: 0%;
+  shape-rendering: optimizeSpeed;
+}
+body {
+	margin: 0%;
+	overflow: hidden;
+}
