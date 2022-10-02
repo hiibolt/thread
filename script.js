@@ -1,7 +1,21 @@
 p5.disableFriendlyErrors = true;
 //[temp]
-var MSGROLL = 0;
 var ENTITY1;
+//let debug = createGraphics(200,200);
+var SYSTEM = {
+	window: {
+		debug: {
+			x: 0,
+			y: 0,
+			msgs: [],
+		},
+		code: {
+			x: 400,
+			y: 400,
+		},
+	},
+}
+//var debug
 var MAIN = {
 	globalVariables: {},
 	entities: {},
@@ -18,10 +32,16 @@ class Entity {
 		this.internalVariables = {};
 
 		//Allowing JSONotation to do the heavy lifting of the nested shenanigans
-		this.INITIAL_CODE_STACK = JSON.parse(initialCode);
+		this._INITIALCODESTACK = JSON.parse(initialCode);
+		this._UPDATECODESTACK  = JSON.parse(updateCode);
 
 		//Execute every code statement (ground level, the first blocks)
-		this.INITIAL_CODE_STACK.forEach((item) => {this.EVALUATE_CODE(item);});
+		this._INITIALCODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
+	}
+	update(){
+		/** Don't implement this until you're there **/
+		//Execute every code statement (ground level, the first blocks)
+		//this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
 	}
 	
 	/** INTERNAL FUNCTIONS **/
@@ -34,8 +54,8 @@ class Entity {
 		}
 		switch (CODE_INFO[0]) {
 			/** Variable manipulation and retrieval **/
-			case "setIntVar":    return this.setInternalVariable(CODE_INFO[1], CODE_INFO[2]);
-			case "getIntVar": return this.getInternalVariable(CODE_INFO[1]);
+			case "setIntVar":   return this.setInternalVariable(CODE_INFO[1], CODE_INFO[2]);
+			case "getIntVar": 	return this.getInternalVariable(CODE_INFO[1]);
 
 			/** Operations **/
 			case "concat": return CODE_INFO.slice(1).join('');
@@ -47,7 +67,7 @@ class Entity {
 
 			/** Debug **/
 			case "print": return printMsg(CODE_INFO.slice(1).join(''));
-			default: nonFatalError("Function " + CODE_INFO[0] + " does not exist.\nInfo: " + CODE_INFO);
+			default: nonFatalError("Function " + CODE_INFO[0] + " does not exist.");
 		}
 	}
 
@@ -87,31 +107,48 @@ class Entity {
 }
 
 function printMsg(msg) {
-	MSGROLL++;
-
-	fill(0);
-	noStroke();
-	textAlign(LEFT);
-	text("Message: " + msg, windowWidth / 20, windowHeight / 2 + MSGROLL * 10);
+	SYSTEM.window.debug.msgs.push("Message: " + msg);
 }
 function nonFatalError(msg) {
-	MSGROLL++;
-	
-	fill(255,0,0);
-	noStroke();
-	textAlign(LEFT);
-	text("Warning: " + msg, windowWidth / 19, windowHeight / 2 + MSGROLL * 10);
+	SYSTEM.window.debug.msgs.push("Warning: " + msg);
 }
 function setup() {
+	//Initialize sketch
 	createCanvas(windowWidth, windowHeight);
-	background(0, 255, 0);
+	background(255,0,0);
+
+	ENTITY1 = new Entity({}, {}, '[["setIntVar","Health","100"],["print",["concat","You have ",["getIntVar","Health"]," health"]],["setIntVar","Health",["mult",["getIntVar","Health"],1,23]],["print",["concat","You have ",["getIntVar","Health"]," health"]],["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
 }
 function draw() {
-	try {
-		if (!ENTITY1) {
-			ENTITY1 = new Entity({}, {}, '[["setIntVar","Health","100"],["print",["concat","You have ",["getIntVar","Health"]," health"]],["setIntVar","Health",["mult",["getIntVar","Health"],1,23]],["print",["concat","You have ",["getIntVar","Health"]," health"]],["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "");
-			//printMsg(JSON.parse('[["setVar","Health","100"],["print","hello world"]]')[0]);
+	background(70);
+
+	push();
+		translate(SYSTEM.window.debug.x, SYSTEM.window.debug.y);
+		scale(1);
+
+		fill(55);
+		stroke(255);
+		strokeWeight(10);
+		rect(5,5,290,150,5);
+
+		if(mouseX > SYSTEM.window.debug.x && mouseX < SYSTEM.window.debug.x + 300 && mouseY > SYSTEM.window.debug.y && mouseY < SYSTEM.window.debug.y + 15){
+			if(mouseIsPressed){
+				SYSTEM.window.debug.x = mouseX - 150;
+				SYSTEM.window.debug.y = mouseY - 7.5;
+			}
+			fill(110);
+		}else{
+			fill(90);
 		}
+		noStroke();
+		rect(0,0,300,15,1);
+	
+		fill(255);
+		noStroke();
+		text(SYSTEM.window.debug.msgs.join('\n'), 15, 20,270);
+	pop();
+	
+	try {
 	} catch (err) {
 		background(120);
 		fill(255);
