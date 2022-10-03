@@ -1,6 +1,16 @@
 p5.disableFriendlyErrors = true;
+/**
+	Casing rules:
+ 	- NAMEOFITEM = Constant, temp variable, or head variables
+	- NameOfItem = Class
+  - nameOfItem = Function, argument, or variable
+	- _~~~~~~~~~ = Hint to internal variable for user or dev
+**/
+
 //[temp]
 var ENTITY1;
+
+// Host Variables
 var SYSTEM = {
 	window: {
 		debug: {
@@ -43,7 +53,7 @@ class Entity {
 		this.updateCodeStack = JSON.parse(updateCode.replace(/~/g,','));
 	}
 	initialize() {
-		//De-referencing for to get a mutable version without modifying code permanently
+		//De-referencing to get a mutable version without modifying code permanently
 		this._INITIALCODESTACK = JSON.parse(JSON.stringify(this.initialCodeStack));
 
 		//Execute every code statement (ground level, the first blocks)
@@ -150,6 +160,7 @@ class Block {
 		}
 	}
 	render() {
+		//Calculate the longest piece of text and stretch/squash block to fit
 		let blockText = textWidth(this.name);
 		for (let i = 0; i < this.args.length; i++) {
 			if (textWidth(this.code[i + 1] != '' ? this.code[i + 1] : this.args[i]) > blockText) {
@@ -167,6 +178,7 @@ class Block {
 		noStroke();
 		text(this.name, this.x + 5, this.y + 13.5);
 		for (let i = 0; i < this.args.length; i++) {
+			//If the argument is filled out, display that-otherwise, display what it should be
 			text(this.code[i + 1] != '' ? this.code[i + 1] : this.args[i], this.x + 5, this.y + 23.5 + (i + 1) * 20);
 		}
 		return 30 + this.args.length * 20;
@@ -233,6 +245,7 @@ function codeViewTEMP() {
 	noStroke();
 	rect(0, 0, 600, 15, 1);
 
+	//Display all tabs
 	SYSTEM.window.code.tabs.forEach((item, ind) => {
 		if ((item == "Item" && !SYSTEM.window.code.selectedEntity) || (item == "Code" && !SYSTEM.window.code.selectedEntity)) {
 			return;
