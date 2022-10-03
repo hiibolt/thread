@@ -294,7 +294,7 @@ function draw() {
 					}
 					let addon = 0;//Add on this height to offset the next block
 					MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack.forEach((i,ind)=>{
-						let block = new Block(ind,i,20,50.5 + addon);
+						let block = new Block(ind,i,300,50.5 + addon);
 						addon += block.render();
 					});
 					break;
