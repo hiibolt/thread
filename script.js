@@ -251,18 +251,22 @@ function draw() {
 								case "setIntVar":
 									this.name = "Set Internal Variable";
 									this.args = ["Variable Name", "Value"];
+									this.color = color('Beige');
 									break;
 								case "getIntVar":
 									this.name = "Get Internal Variable";
 									this.args = ["Variable Name"];
+									this.color = color('Beige');
 									break;
 								case "print":
 									this.name = "Print Message";
 									this.args = ["Message"];
+									this.color = color('DeepSkyBlue');
 									break;
 								default:
 									this.name = this.code[0];
 									this.args = [];
+									this.color = color('Red');
 							}
 						}
 						render(){
@@ -272,9 +276,9 @@ function draw() {
 									blockText = textWidth(this.code[i+1] != '' ? this.code[i+1] : this.args[i]);
 								}
 							}
-							fill(255,0,0);
-							stroke(50);
-							strokeWeight(2);
+							fill(this.color);
+							stroke(lerpColor(this.color,color(10),0.2));
+							strokeWeight(3);
 							rect(this.x,this.y,blockText + 10,30 + this.args.length * 20,5);
 							
 							fill(0,0,0);
