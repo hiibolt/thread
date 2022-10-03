@@ -157,13 +157,13 @@ function setup() {
 	createCanvas(windowWidth, windowHeight);
 	background(255, 0, 0);
 
-	MAIN.entities["Main"] = new Entity({}, {}, '[["setIntVar","Health","100"],["print",["concat","You have ",["getIntVar","Health"]," health"]],["setIntVar","Health",["mult",["getIntVar","Health"],1,23]],["print",["concat","You have ",["getIntVar","Health"]," health"]],["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
+	MAIN.entities["MainEntity"] = new Entity({}, {}, '[["setIntVar","Health","100"],["print",["concat","You have ",["getIntVar","Health"]," health"]],["setIntVar","Health",["mult",["getIntVar","Health"],1,23]],["print",["concat","You have ",["getIntVar","Health"]," health"]],["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
 }
 function codeViewTEMP() {
 	fill(55);
 	stroke(255);
 	strokeWeight(10);
-	rect(5, 5, 590, 400, 5);
+	rect(5, 5, 590, 450, 5);
 
 	if (mouseX > SYSTEM.window.code.x && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y && mouseY < SYSTEM.window.code.y + 15) {
 		if (mouseIsPressed) {
@@ -199,7 +199,7 @@ function codeViewTEMP() {
 		text(item, 40 + ind * 50, 32.5);
 	});
 	fill(90);
-	rect(5,36,590,369,5)
+	rect(5,36,590,419,5)
 }
 function draw() {
 	background(70);
@@ -240,12 +240,58 @@ function draw() {
 					rect(60,50,25,25,2);
 					break;
 				case "Code":
+					class Block{
+						constructor(codeIndex,code, x, y){
+							this.x = x;
+							this.y = y;
+							this.code = code;
+
+							//Given the code, determine what the user's displayed name and arguments are
+							switch(this.code[0]){
+								case "setIntVar":
+									this.name = "Set Internal Variable";
+									this.args = ["Variable Name", "Value"];
+									break;
+								case "getIntVar":
+									this.name = "Get Internal Variable";
+									this.args = ["Variable Name"];
+									break;
+								case "print":
+									this.name = "Print Message";
+									this.args = ["Message"];
+									break;
+								default:
+									this.name = this.code[0];
+									this.args = [];
+							}
+						}
+						render(){
+							let blockText = textWidth(this.name);
+							for(let i = 0;i < this.args.length;i++){
+								if(textWidth(this.code[i+1] != '' ? this.code[i+1] : this.args[i]) > blockText){
+									blockText = textWidth(this.code[i+1] != '' ? this.code[i+1] : this.args[i]);
+								}
+							}
+							fill(255,0,0);
+							stroke(50);
+							strokeWeight(2);
+							rect(this.x,this.y,blockText + 10,30 + this.args.length * 20,5);
+							
+							fill(0,0,0);
+							textAlign(LEFT);
+							textSize(12);
+							noStroke();
+							text(this.name,this.x + 5,this.y + 13.5);
+							for(let i = 0;i < this.args.length;i++){
+								text(this.code[i+1] != '' ? this.code[i+1] : this.args[i],this.x + 5, this.y + 23.5 + (i+1) * 20);
+							}
+							return 30 + this.args.length * 20;
+						}
+					}
+					let addon = 0;//Add on this height to offset the next block
 					MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack.forEach((i,ind)=>{
-						fill(255);
-						noStroke();
-						textSize(12);
-						textAlign(LEFT);
-						text(i[0] + "("+i.slice(1)+")", 20, 63.5 + ind * 15);
+						let block = new Block(ind,i,20,50.5 + addon);
+						addon += block.render();
 					});
 					break;
 				case "Entities":
