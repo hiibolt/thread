@@ -24,6 +24,7 @@ var MAIN = {
 };
 
 /** Classes **/
+//Host entity. Core framework of what the user utilizes.
 class Entity {
 	constructor(initialPos, initialRot, initialCode, updateCode) {
 		//Initialize variables all entities share
@@ -34,15 +35,17 @@ class Entity {
 		this.rY = initialRot.y;
 		this.rZ = initialRot.z;
 		this.internalVariables = {};
-
+		this.rawInitialCode = initialCode;
+		this.rawUpdateCode = updateCode;
+		
 		//Allowing JSONotation to do the heavy lifting of the nested shenanigans
-		this.initialCodeStack = JSON.parse(initialCode);
-		this.updateCodeStack = JSON.parse(updateCode);
+		this.initialCodeStack = JSON.parse(initialCode.replace(/~/g,','));
+		this.updateCodeStack = JSON.parse(updateCode.replace(/~/g,','));
 	}
 	initialize() {
 		//De-referencing for to get a mutable version without modifying code permanently
 		this._INITIALCODESTACK = JSON.parse(JSON.stringify(this.initialCodeStack));
-		
+
 		//Execute every code statement (ground level, the first blocks)
 		this._INITIALCODESTACK.forEach((item) => { this.EVALUATE_CODE(item); });
 	}
@@ -116,6 +119,59 @@ class Entity {
 		return ret;
 	}
 }
+//Block representation of code. Allows the user to better read their code.
+class Block {
+	constructor(code, x, y) {
+		this.x = x;
+		this.y = y;
+		this.code = code;
+
+		//Given the code, determine what the user's displayed name and arguments are
+		switch (this.code[0]) {
+			case "setIntVar":
+				this.name = "Set Internal Variable";
+				this.args = ["Variable Name", "Value"];
+				this.color = color('Beige');
+				break;
+			case "getIntVar":
+				this.name = "Get Internal Variable";
+				this.args = ["Variable Name"];
+				this.color = color('Beige');
+				break;
+			case "print":
+				this.name = "Print Message";
+				this.args = ["Message"];
+				this.color = color('DeepSkyBlue');
+				break;
+			default:
+				this.name = this.code[0];
+				this.args = [];
+				this.color = color('Red');
+		}
+	}
+	render() {
+		let blockText = textWidth(this.name);
+		for (let i = 0; i < this.args.length; i++) {
+			if (textWidth(this.code[i + 1] != '' ? this.code[i + 1] : this.args[i]) > blockText) {
+				blockText = textWidth(this.code[i + 1] != '' ? this.code[i + 1] : this.args[i]);
+			}
+		}
+		fill(this.color);
+		stroke(lerpColor(this.color, color(10), 0.2));
+		strokeWeight(3);
+		rect(this.x, this.y, blockText + 10, 30 + this.args.length * 20, 5);
+
+		fill(0, 0, 0);
+		textAlign(LEFT);
+		textSize(12);
+		noStroke();
+		text(this.name, this.x + 5, this.y + 13.5);
+		for (let i = 0; i < this.args.length; i++) {
+			text(this.code[i + 1] != '' ? this.code[i + 1] : this.args[i], this.x + 5, this.y + 23.5 + (i + 1) * 20);
+		}
+		return 30 + this.args.length * 20;
+	}
+}
 
 /** Graphical Functions **/
 function debugView() {
@@ -156,8 +212,8 @@ function setup() {
 	//Initialize sketch
 	createCanvas(windowWidth, windowHeight);
 	background(255, 0, 0);
-
-	MAIN.entities["MainEntity"] = new Entity({}, {}, '[["setIntVar","Health","100"],["print",["concat","You have ",["getIntVar","Health"]," health"]],["setIntVar","Health",["mult",["getIntVar","Health"],1,23]],["print",["concat","You have ",["getIntVar","Health"]," health"]],["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
+	
+	MAIN.entities["MainEntity"] = new Entity({}, {}, '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
 }
 function codeViewTEMP() {
 	fill(55);
@@ -178,7 +234,7 @@ function codeViewTEMP() {
 	rect(0, 0, 600, 15, 1);
 
 	SYSTEM.window.code.tabs.forEach((item, ind) => {
-		if((item == "Item" && !SYSTEM.window.code.selectedEntity) || (item == "Code" && !SYSTEM.window.code.selectedEntity)){
+		if ((item == "Item" && !SYSTEM.window.code.selectedEntity) || (item == "Code" && !SYSTEM.window.code.selectedEntity)) {
 			return;
 		}
 		if (mouseX > SYSTEM.window.code.x + 15 + ind * 50 && mouseX < SYSTEM.window.code.x + 50 + 15 + ind * 50 && mouseY > SYSTEM.window.code.y + 19 && mouseY < SYSTEM.window.code.y + 39) {
@@ -199,137 +255,99 @@ function codeViewTEMP() {
 		text(item, 40 + ind * 50, 32.5);
 	});
 	fill(90);
-	rect(5,36,590,419,5)
+	rect(5, 36, 590, 419, 5)
 }
 function draw() {
 	background(70);
 	try {
 		debugView();
-		
+
 		push();
-			translate(SYSTEM.window.code.x, SYSTEM.window.code.y);
-			scale(1);
-			codeViewTEMP();
-			switch(SYSTEM.window.code.selectedTab){
-				case "Test":
-					if(!SYSTEM.window.code.playing){
-						if(mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 45 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed){
-							SYSTEM.window.code.playing = true;
-							for(let entity in MAIN.entities){
-								MAIN.entities[entity].initialize();
-							}
+		translate(SYSTEM.window.code.x, SYSTEM.window.code.y);
+		scale(1);
+		codeViewTEMP();
+		switch (SYSTEM.window.code.selectedTab) {
+			case "Test":
+				if (!SYSTEM.window.code.playing) {
+					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 45 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
+						SYSTEM.window.code.playing = true;
+						for (let entity in MAIN.entities) {
+							MAIN.entities[entity].initialize();
 						}
-						fill(0,200,0);
-						stroke(0,170,0);
-					}else{
-						fill(200);
-						stroke(170);
 					}
-					triangle(20,50,45,62.5,20,75);
+					fill(0, 200, 0);
+					stroke(0, 170, 0);
+				} else {
+					fill(200);
+					stroke(170);
+				}
+				triangle(20, 50, 45, 62.5, 20, 75);
 
-					if(SYSTEM.window.code.playing){
-						if(mouseX > SYSTEM.window.code.x + 60 && mouseX < SYSTEM.window.code.x + 85 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed){
-							SYSTEM.window.code.playing = false;
-						}
-						fill(200,0,0);
-						stroke(170,0,0);
-					}else{
-						fill(200);
-						stroke(170);
+				if (SYSTEM.window.code.playing) {
+					if (mouseX > SYSTEM.window.code.x + 60 && mouseX < SYSTEM.window.code.x + 85 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
+						SYSTEM.window.code.playing = false;
 					}
-					rect(60,50,25,25,2);
-					break;
-				case "Code":
-					class Block{
-						constructor(codeIndex,code, x, y){
-							this.x = x;
-							this.y = y;
-							this.code = code;
+					fill(200, 0, 0);
+					stroke(170, 0, 0);
+				} else {
+					fill(200);
+					stroke(170);
+				}
+				rect(60, 50, 25, 25, 2);
+				break;
+			case "Code":
+				//Shorthand so multiple deep references are eliminated and readability improves
+				let rawEntityCode = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode.split('~');
+				for(let i = 0;i < rawEntityCode.length;i++){
+					textSize(12);
+					textAlign(LEFT);
+					fill(180);
+					noStroke();
+					text((i + 1) + " | ", 20, 60 + i * 20);
+					fill(0);
+					text(rawEntityCode[i], textWidth(i + " | ") + 20, 60 + i * 20);
+				}
+				
+				//Add on this height to offset the next block
+				let blockOffset = 0;
+				//Represent all SAVED code as blocks.
+				MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack.forEach((i) => {
+					let block = new Block(i, 300, 50.5 + blockOffset);
+					blockOffset += block.render();
+				});
+				break;
+			case "Entities":
+				let ind = -1;
+				fill(255);
+				noStroke();
+				textSize(18);
+				textAlign(LEFT);
+				text("Entity List:", 20, 63.5);
 
-							//Given the code, determine what the user's displayed name and arguments are
-							switch(this.code[0]){
-								case "setIntVar":
-									this.name = "Set Internal Variable";
-									this.args = ["Variable Name", "Value"];
-									this.color = color('Beige');
-									break;
-								case "getIntVar":
-									this.name = "Get Internal Variable";
-									this.args = ["Variable Name"];
-									this.color = color('Beige');
-									break;
-								case "print":
-									this.name = "Print Message";
-									this.args = ["Message"];
-									this.color = color('DeepSkyBlue');
-									break;
-								default:
-									this.name = this.code[0];
-									this.args = [];
-									this.color = color('Red');
-							}
+				for (let key in MAIN.entities) {
+					ind++;
+					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 120 && mouseY > SYSTEM.window.code.y + 73.5 + ind * 50 && mouseY < SYSTEM.window.code.y + 40 + 73.5 + ind * 50) {
+						if (mouseIsPressed) {
+							SYSTEM.window.code.selectedEntity = key;
 						}
-						render(){
-							let blockText = textWidth(this.name);
-							for(let i = 0;i < this.args.length;i++){
-								if(textWidth(this.code[i+1] != '' ? this.code[i+1] : this.args[i]) > blockText){
-									blockText = textWidth(this.code[i+1] != '' ? this.code[i+1] : this.args[i]);
-								}
-							}
-							fill(this.color);
-							stroke(lerpColor(this.color,color(10),0.2));
-							strokeWeight(3);
-							rect(this.x,this.y,blockText + 10,30 + this.args.length * 20,5);
-							
-							fill(0,0,0);
-							textAlign(LEFT);
-							textSize(12);
-							noStroke();
-							text(this.name,this.x + 5,this.y + 13.5);
-							for(let i = 0;i < this.args.length;i++){
-								text(this.code[i+1] != '' ? this.code[i+1] : this.args[i],this.x + 5, this.y + 23.5 + (i+1) * 20);
-							}
-							return 30 + this.args.length * 20;
-						}
+						fill(140);
+					} else {
+						fill(120);
 					}
-					let addon = 0;//Add on this height to offset the next block
-					MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack.forEach((i,ind)=>{
-						let block = new Block(ind,i,300,50.5 + addon);
-						addon += block.render();
-					});
-					break;
-				case "Entities":
-					let ind = -1;
+					rect(20, 73.5 + ind * 50, 100, 40, 4);
+
 					fill(255);
 					noStroke();
-					textSize(18);
-					textAlign(LEFT);
-					text("Entity List:", 20, 63.5);
-					
-					for(let key in MAIN.entities){		
-						ind ++;
-						if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 120 && mouseY > SYSTEM.window.code.y + 73.5 + ind * 50 && mouseY < SYSTEM.window.code.y + 40 + 73.5 + ind * 50) {
-							if (mouseIsPressed) {
-								SYSTEM.window.code.selectedEntity = key;
-							}
-							fill(140);
-						} else {
-							fill(120);
-						}
-						rect(20,73.5 + ind * 50,100,40,4);
-						
-						fill(255);
-						noStroke();
-						textSize(12);
-						textAlign(CENTER);
-						text(key, 70, 97.5 + ind * 50);
-					}
-					break;
-			}
+					textSize(12);
+					textAlign(CENTER);
+					text(key, 70, 97.5 + ind * 50);
+				}
+				break;
+		}
 		pop();
 
-		if(SYSTEM.window.code.playing){
-			for(let entity in MAIN.entities){
+		if (SYSTEM.window.code.playing) {
+			for (let entity in MAIN.entities) {
 				MAIN.entities[entity].update();
 			}
 		}
