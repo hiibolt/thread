@@ -7,9 +7,6 @@ p5.disableFriendlyErrors = true;
 	- _~~~~~~~~~ = Hint to internal variable for user or dev
 **/
 
-//[temp]
-var ENTITY1;
-
 // Host Variables
 var SYSTEM = {
 	window: {
@@ -25,6 +22,8 @@ var SYSTEM = {
 			selectedTab: "Entities",
 			selectedEntity: undefined,
 			playing: false,
+			textCodeGraphics: undefined,
+			textCodeOffset: 0,
 		},
 	},
 }
@@ -38,7 +37,7 @@ var MAIN = {
 class Entity {
 	constructor(initialPos, initialRot, initialCode, updateCode) {
 		//Initialize variables all entities share
-		this.x = initialPos.x;
+		this.x = initialPos.x; 
 		this.y = initialPos.y;
 		this.z = initialPos.z;
 		this.rX = initialRot.x;
@@ -55,7 +54,7 @@ class Entity {
 	initialize() {
 		//De-referencing to get a mutable version without modifying code permanently
 		this._INITIALCODESTACK = JSON.parse(JSON.stringify(this.initialCodeStack));
-
+		
 		//Execute every code statement (ground level, the first blocks)
 		this._INITIALCODESTACK.forEach((item) => { this.EVALUATE_CODE(item); });
 	}
@@ -66,15 +65,23 @@ class Entity {
 		//Execute every code statement (ground level, the first blocks)
 		//this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
 	}
-
+	
 	/** INTERNAL FUNCTIONS **/
 	//The execution of the string-based code provide by the user.
 	EVALUATE_CODE(CODE_INFO) {
+		/**
+			Structure of CODE_INFO:
+	 			CODE_INFO[0]     = What function is being employed
+		 		CODE_INFO[n > 0] = Arguments for said function
+		**/
+		
+		//Check for nested functions, evaluate any matches
 		for (let i = 0; i < CODE_INFO.length; i++) {
 			if (Array.isArray(CODE_INFO[i])) {
 				CODE_INFO[i] = this.EVALUATE_CODE(CODE_INFO[i]);
 			}
 		}
+		
 		switch (CODE_INFO[0]) {
 			/** Variable manipulation and retrieval **/
 			case "setIntVar": return this.setInternalVariable(CODE_INFO[1], CODE_INFO[2]);
@@ -213,20 +220,6 @@ function debugView() {
 	text(SYSTEM.window.debug.msgs.slice(-5).join('\n'), 15, 20, 270);
 	pop();
 }
-
-function printMsg(msg) {
-	SYSTEM.window.debug.msgs.push("Message: " + msg);
-}
-function nonFatalError(msg) {
-	SYSTEM.window.debug.msgs.push("Warning: " + msg);
-}
-function setup() {
-	//Initialize sketch
-	createCanvas(windowWidth, windowHeight);
-	background(255, 0, 0);
-	
-	MAIN.entities["MainEntity"] = new Entity({}, {}, '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
-}
 function codeViewTEMP() {
 	fill(55);
 	stroke(255);
@@ -270,6 +263,30 @@ function codeViewTEMP() {
 	fill(90);
 	rect(5, 36, 590, 419, 5)
 }
+
+/** Debug Functions **/
+function printMsg(msg) {
+	SYSTEM.window.debug.msgs.push("Message: " + msg);
+}
+function nonFatalError(msg) {
+	SYSTEM.window.debug.msgs.push("Warning: " + msg);
+}
+
+function mouseWheel(event){
+	//Mousewheel scrolling for the rightmost (text)
+	if(SYSTEM.window.code.selectedTab == "Code" && mouseX > SYSTEM.window.code.x + 300 && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y + 15 && mouseY < SYSTEM.window.code.y + 400){
+		SYSTEM.window.code.textCodeOffset -= event.delta / 2;
+	}
+}
+function setup() {
+	//Initialize sketch
+	createCanvas(windowWidth, windowHeight);
+	background(255, 0, 0);
+
+	SYSTEM.window.code.textCodeGraphics  = createGraphics(290,400);
+	
+	MAIN.entities["MainEntity"] = new Entity({}, {}, '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
+}
 function draw() {
 	background(70);
 	try {
@@ -283,7 +300,9 @@ function draw() {
 			case "Test":
 				if (!SYSTEM.window.code.playing) {
 					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 45 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
+						//Start update process for all entities
 						SYSTEM.window.code.playing = true;
+						//If the green play button is pressed, initialize all entities in the world list 
 						for (let entity in MAIN.entities) {
 							MAIN.entities[entity].initialize();
 						}
@@ -310,22 +329,28 @@ function draw() {
 				break;
 			case "Code":
 				//Shorthand so multiple deep references are eliminated and readability improves
-				let rawEntityCode = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode.split('~');
+				let rawEntityCode = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode.slice(1,-1).split('~');
+				SYSTEM.window.code.textCodeGraphics.background(90);
+				SYSTEM.window.code.textCodeGraphics.push();
+				SYSTEM.window.code.textCodeGraphics.translate(SYSTEM.window.code.textCodeOffset,0);
 				for(let i = 0;i < rawEntityCode.length;i++){
-					textSize(12);
-					textAlign(LEFT);
-					fill(180);
-					noStroke();
-					text((i + 1) + " | ", 20, 60 + i * 20);
-					fill(0);
-					text(rawEntityCode[i], textWidth(i + " | ") + 20, 60 + i * 20);
+					SYSTEM.window.code.textCodeGraphics.textSize(12);
+					SYSTEM.window.code.textCodeGraphics.textAlign(LEFT);
+					SYSTEM.window.code.textCodeGraphics.fill(180);
+					SYSTEM.window.code.textCodeGraphics.noStroke();
+					SYSTEM.window.code.textCodeGraphics.text((i + 1) + " | ", 0, 10 + i * 20);
+					SYSTEM.window.code.textCodeGraphics.fill(0); 
+					SYSTEM.window.code.textCodeGraphics.text(rawEntityCode[i], textWidth(i + " | ") + 0, 10 + i * 20);
 				}
+				SYSTEM.window.code.textCodeGraphics.pop();
+				image(SYSTEM.window.code.textCodeGraphics,290,50);
 				
 				//Add on this height to offset the next block
 				let blockOffset = 0;
+				let initialCodeList = MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack;
 				//Represent all SAVED code as blocks.
-				MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack.forEach((i) => {
-					let block = new Block(i, 300, 50.5 + blockOffset);
+				initialCodeList.forEach((i) => {
+					let block = new Block(i, 20, 50.5 + blockOffset);
 					blockOffset += block.render();
 				});
 				break;
