@@ -24,6 +24,11 @@ var SYSTEM = {
 			playing: false,
 			textCodeGraphics: undefined,
 			textCodeOffset: 0,
+			unsavedCode: undefined,
+			cursor:{
+				line: 0,
+				x: 0
+			}
 		},
 	},
 }
@@ -49,7 +54,7 @@ class Entity {
 		
 		//Allowing JSONotation to do the heavy lifting of the nested shenanigans
 		this.initialCodeStack = JSON.parse(initialCode.replace(/~/g,','));
-		this.updateCodeStack = JSON.parse(updateCode.replace(/~/g,','));
+		this.updateCodeStack  = JSON.parse(updateCode.replace(/~/g,','));
 	}
 	initialize() {
 		//De-referencing to get a mutable version without modifying code permanently
@@ -271,7 +276,43 @@ function printMsg(msg) {
 function nonFatalError(msg) {
 	SYSTEM.window.debug.msgs.push("Warning: " + msg);
 }
+function syntaxError(msg){
+	SYSTEM.window.debug.msgs.push("Syntax error: " + msg);
+}
 
+//String splice function. Identical to Array.splice
+String.prototype.splice = function(ind, str, rem) {
+    return this.slice(0, ind) + str + this.slice(ind + rem);
+};
+function keyPressed() {
+  if (keyCode === LEFT_ARROW) {
+		//Shift cursor left
+		if(SYSTEM.window.code.selectedTab == "Code"){
+			SYSTEM.window.code.cursor.x = abs(SYSTEM.window.code.cursor.x - 1);
+		}
+  }
+	if(keyCode === RIGHT_ARROW) {
+		//Shift cursor right
+		if(SYSTEM.window.code.selectedTab == "Code"){
+			SYSTEM.window.code.cursor.x += 1;
+		}
+  }
+	if(keyCode === 8){
+		if(SYSTEM.window.code.selectedTab == "Code" && SYSTEM.window.code.cursor.x != 0){
+			SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].splice(SYSTEM.window.code.cursor.x - 1,"",1)
+			//Maintain cursor position
+			SYSTEM.window.code.cursor.x -= 1;
+		}
+	}
+}
+function keyTyped(){
+	if(SYSTEM.window.code.selectedTab == "Code"){
+		//Insert <key> at <cursor x> on line <cursor line>
+		SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].splice(SYSTEM.window.code.cursor.x,key,0);
+		//Maintain cursor position
+		SYSTEM.window.code.cursor.x += 1;
+	}
+}
 function mouseWheel(event){
 	//Mousewheel scrolling for the rightmost (text)
 	if(SYSTEM.window.code.selectedTab == "Code" && mouseX > SYSTEM.window.code.x + 300 && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y + 15 && mouseY < SYSTEM.window.code.y + 400){
@@ -291,17 +332,18 @@ function draw() {
 	background(70);
 	try {
 		debugView();
-
+		
 		push();
 		translate(SYSTEM.window.code.x, SYSTEM.window.code.y);
 		scale(1);
 		codeViewTEMP();
 		switch (SYSTEM.window.code.selectedTab) {
 			case "Test":
+				//Start button
 				if (!SYSTEM.window.code.playing) {
 					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 45 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
 						//Start update process for all entities
-						SYSTEM.window.code.playing = true;
+						SYSTEM.window.code.playing = true;5
 						//If the green play button is pressed, initialize all entities in the world list 
 						for (let entity in MAIN.entities) {
 							MAIN.entities[entity].initialize();
@@ -314,7 +356,8 @@ function draw() {
 					stroke(170);
 				}
 				triangle(20, 50, 45, 62.5, 20, 75);
-
+				
+				//Stop button
 				if (SYSTEM.window.code.playing) {
 					if (mouseX > SYSTEM.window.code.x + 60 && mouseX < SYSTEM.window.code.x + 85 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
 						SYSTEM.window.code.playing = false;
@@ -328,19 +371,41 @@ function draw() {
 				rect(60, 50, 25, 25, 2);
 				break;
 			case "Code":
-				//Shorthand so multiple deep references are eliminated and readability improves
-				let rawEntityCode = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode.slice(1,-1).split('~');
+				//Translation from instructions to more readable code, leading to nicer readability and syntax.
+				if(!SYSTEM.window.code.unsavedCode){
+					let TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
+					TEMP = TEMP.slice(1,-1);//Ignore edge brackets for readability
+					TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g,"i_$1");//Eliminate unnessecary var functions
+					SYSTEM.window.code.unsavedCode = TEMP.split('~');//Split per line
+				}
+				
+				//Line selection
+				if(mouseIsPressed && mouseX > SYSTEM.window.code.x + 300 && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y + 15 && mouseY < SYSTEM.window.code.y + 450){
+					//Math for choosing the line (mouseY offset by location of text rounded by a factor of text height)
+					SYSTEM.window.code.cursor.line = constrain(Math.floor((mouseY - SYSTEM.window.code.y - 50)/20),0,SYSTEM.window.code.unsavedCode.length);
+					//If the line doesn't exist yet, make it
+					if(SYSTEM.window.code.cursor.line == SYSTEM.window.code.unsavedCode.length){
+						SYSTEM.window.code.unsavedCode.push("");
+					}
+				}
+				
+				/** 
+					This is how I prevented text rollover while maintaining smooth movement.
+					I'm aware this is super expensive, but I can't find a workaround that maintains smooth scrolling.
+		 			Accomplished by opening another canvas and writing graphics onto it so rollover is solved via edges.
+				**/
 				SYSTEM.window.code.textCodeGraphics.background(90);
 				SYSTEM.window.code.textCodeGraphics.push();
 				SYSTEM.window.code.textCodeGraphics.translate(SYSTEM.window.code.textCodeOffset,0);
-				for(let i = 0;i < rawEntityCode.length;i++){
+				for(let i = 0;i < SYSTEM.window.code.unsavedCode.length;i++){
+					let addon = SYSTEM.window.code.cursor.line == i ? (frameCount % 50 > 25 ? "|" : " ") : "";//If the line's selected, framecount interpolation creates a blinking effect
 					SYSTEM.window.code.textCodeGraphics.textSize(12);
 					SYSTEM.window.code.textCodeGraphics.textAlign(LEFT);
 					SYSTEM.window.code.textCodeGraphics.fill(180);
 					SYSTEM.window.code.textCodeGraphics.noStroke();
 					SYSTEM.window.code.textCodeGraphics.text((i + 1) + " | ", 0, 10 + i * 20);
 					SYSTEM.window.code.textCodeGraphics.fill(0); 
-					SYSTEM.window.code.textCodeGraphics.text(rawEntityCode[i], textWidth(i + " | ") + 0, 10 + i * 20);
+					SYSTEM.window.code.textCodeGraphics.text(SYSTEM.window.code.unsavedCode[i].splice(SYSTEM.window.code.cursor.x, addon, 0), textWidth(i + " | ") + 0, 10 + i * 20);
 				}
 				SYSTEM.window.code.textCodeGraphics.pop();
 				image(SYSTEM.window.code.textCodeGraphics,290,50);
@@ -353,6 +418,27 @@ function draw() {
 					let block = new Block(i, 20, 50.5 + blockOffset);
 					blockOffset += block.render();
 				});
+
+				//Represent and save button.
+				if(mouseX > SYSTEM.window.code.x + 275 && mouseX < SYSTEM.window.code.x + 325 && mouseY > SYSTEM.window.code.y + 410 && mouseY < SYSTEM.window.code.y + 435){
+					fill(200,0,0);
+					if(mouseIsPressed){
+						try{
+							let TEMP = SYSTEM.window.code.unsavedCode.filter((a)=>a).join('~');//Remove sparse entries and compile array
+							TEMP = TEMP.replace(/i_(\w+)/g,'["getIntVar","$1"]');//Change variables back to readable instructions
+							TEMP = '[' + TEMP + ']';//Make said instructions JSON friendly
+							MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g,','));//Attempt to parse code into array form and update the entity's instructions
+							MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;//Update the entity's raw code
+						}catch(err){
+							//Spam the error (cry about it)
+							syntaxError("COULD NOT COMPILE! "+err)
+						}
+					}
+				}else{
+					fill(255,0,0);
+				}
+				noStroke();
+				rect(275,410,50,25,3);
 				break;
 			case "Entities":
 				let ind = -1;
@@ -362,8 +448,10 @@ function draw() {
 				textAlign(LEFT);
 				text("Entity List:", 20, 63.5);
 
+				//Entity list
 				for (let key in MAIN.entities) {
 					ind++;
+					//Entity selection
 					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 120 && mouseY > SYSTEM.window.code.y + 73.5 + ind * 50 && mouseY < SYSTEM.window.code.y + 40 + 73.5 + ind * 50) {
 						if (mouseIsPressed) {
 							SYSTEM.window.code.selectedEntity = key;
@@ -384,6 +472,7 @@ function draw() {
 		}
 		pop();
 
+		//Update all entities
 		if (SYSTEM.window.code.playing) {
 			for (let entity in MAIN.entities) {
 				MAIN.entities[entity].update();
