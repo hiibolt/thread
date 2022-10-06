@@ -298,19 +298,36 @@ function keyPressed() {
 		}
   }
 	if(keyCode === 8){
-		if(SYSTEM.window.code.selectedTab == "Code" && SYSTEM.window.code.cursor.x != 0){
-			SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].splice(SYSTEM.window.code.cursor.x - 1,"",1)
-			//Maintain cursor position
-			SYSTEM.window.code.cursor.x -= 1;
+		if(SYSTEM.window.code.selectedTab == "Code"){
+			if(SYSTEM.window.code.cursor.x != 0){
+				SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].splice(SYSTEM.window.code.cursor.x - 1,"",1)
+				//Maintain cursor position
+				SYSTEM.window.code.cursor.x -= 1;
+			}else if(SYSTEM.window.code.cursor.line != 0){
+				//Move the cursor to the middleground of the previous sentence and currrent line
+				SYSTEM.window.code.cursor.x = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line-1].length;
+				//Add any existing content onto the previous line
+				SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line-1] += SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line];
+				//Delete the current line
+				SYSTEM.window.code.unsavedCode.splice(SYSTEM.window.code.cursor.line,1);
+				//Move the cursor back a line
+				SYSTEM.window.code.cursor.line -= 1;
+			}
 		}
 	}
 }
 function keyTyped(){
 	if(SYSTEM.window.code.selectedTab == "Code"){
-		//Insert <key> at <cursor x> on line <cursor line>
-		SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].splice(SYSTEM.window.code.cursor.x,key,0);
-		//Maintain cursor position
-		SYSTEM.window.code.cursor.x += 1;
+		if(key != "Enter"){
+			//Insert <key> at <cursor x> on line <cursor line>
+			SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].splice(SYSTEM.window.code.cursor.x,key,0);
+			//Maintain cursor position
+			SYSTEM.window.code.cursor.x += 1;
+		}else{
+			SYSTEM.window.code.unsavedCode.splice(SYSTEM.window.code.cursor.line + 1,0,SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].slice(SYSTEM.window.code.cursor.x));
+			//Preserve any old content on the old line minus what was after cursor
+			SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].slice(0,SYSTEM.window.code.cursor.x);
+		}
 	}
 }
 function mouseWheel(event){
@@ -343,7 +360,9 @@ function draw() {
 				if (!SYSTEM.window.code.playing) {
 					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 45 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
 						//Start update process for all entities
-						SYSTEM.window.code.playing = true;5
+						SYSTEM.window.code.playing = true;
+						//Clear console
+						SYSTEM.window.debug.msgs = [];
 						//If the green play button is pressed, initialize all entities in the world list 
 						for (let entity in MAIN.entities) {
 							MAIN.entities[entity].initialize();
@@ -387,6 +406,7 @@ function draw() {
 					if(SYSTEM.window.code.cursor.line == SYSTEM.window.code.unsavedCode.length){
 						SYSTEM.window.code.unsavedCode.push("");
 					}
+					SYSTEM.window.code.cursor.x = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].length;
 				}
 				
 				/** 
@@ -412,23 +432,44 @@ function draw() {
 				
 				//Add on this height to offset the next block
 				let blockOffset = 0;
-				let initialCodeList = MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack;
-				//Represent all SAVED code as blocks.
-				initialCodeList.forEach((i) => {
-					let block = new Block(i, 20, 50.5 + blockOffset);
-					blockOffset += block.render();
-				});
+					// NON AUTOMATIC BLOCKING!!!! LEAVE THIS IN CASE OF REVERT
+					//let initialCodeList = MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack;
+				try{
+					let TEMP = SYSTEM.window.code.unsavedCode.filter((a)=>a).join('~');
+					TEMP = TEMP.replace(/i_(\w+)/g,'["getIntVar","$1"]');
+					TEMP = '[' + TEMP + ']';
+					let initialCodeList = JSON.parse(TEMP.replace(/~/g,','));
+					
+					//Represent all SAVED code as blocks.
+					initialCodeList.forEach((i) => {
+						try{
+							let block = new Block(i, 20, 50.5 + blockOffset);
+							blockOffset += block.render();
+						}catch{
+							
+						}
+					});
+				}catch(err){
+					
+				}
 
 				//Represent and save button.
 				if(mouseX > SYSTEM.window.code.x + 275 && mouseX < SYSTEM.window.code.x + 325 && mouseY > SYSTEM.window.code.y + 410 && mouseY < SYSTEM.window.code.y + 435){
 					fill(200,0,0);
 					if(mouseIsPressed){
 						try{
-							let TEMP = SYSTEM.window.code.unsavedCode.filter((a)=>a).join('~');//Remove sparse entries and compile array
-							TEMP = TEMP.replace(/i_(\w+)/g,'["getIntVar","$1"]');//Change variables back to readable instructions
-							TEMP = '[' + TEMP + ']';//Make said instructions JSON friendly
-							MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g,','));//Attempt to parse code into array form and update the entity's instructions
-							MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;//Update the entity's raw code
+							/**
+								Line 1: Remove sparse entries and compile array
+								Line 2: Change variables back to machine-readable instructions
+								Line 3: Make said instructions JSON friendly
+								Line 4: Attempt to parse code into array form and update the entity's instructions
+								Line 5: Update the entity's raw code
+							**/
+							let TEMP = SYSTEM.window.code.unsavedCode.filter((a)=>a).join('~');
+							TEMP = TEMP.replace(/i_(\w+)/g,'["getIntVar","$1"]');
+							TEMP = '[' + TEMP + ']';
+							MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g,','));
+							MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
 						}catch(err){
 							//Spam the error (cry about it)
 							syntaxError("COULD NOT COMPILE! "+err)
