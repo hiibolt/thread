@@ -28,7 +28,8 @@ var SYSTEM = {
 			cursor:{
 				line: 0,
 				x: 0
-			}
+			},
+			input: undefined,
 		},
 	},
 }
@@ -91,6 +92,8 @@ class Entity {
 			/** Variable manipulation and retrieval **/
 			case "setIntVar": return this.setInternalVariable(CODE_INFO[1], CODE_INFO[2]);
 			case "getIntVar": return this.getInternalVariable(CODE_INFO[1]);
+			case "setPos" :   return this.setPosition(CODE_INFO[1],CODE_INFO[2],CODE_INFO[3]);
+			case "setRot" :   return this.setRotation(CODE_INFO[1],CODE_INFO[2],CODE_INFO[3]);
 
 			/** Operations **/
 			case "concat": return CODE_INFO.slice(1).join('');
@@ -111,7 +114,7 @@ class Entity {
 	//Sets variable <name> to <value>
 	setInternalVariable(name, value) {
 		try {
-			this.internalVariables.name = value;
+			this.internalVariables[name] = value;
 			return 0;
 		} catch (err) {
 			nonFatalError("Variable " + name + " does not exist or could not be set");
@@ -120,10 +123,34 @@ class Entity {
 	}
 	//Returns variable <name>
 	getInternalVariable(name) {
-		if (this.internalVariables.name) {
-			return this.internalVariables.name;
+		if (this.internalVariables[name]){
+			return this.internalVariables[name];
 		} else {
 			nonFatalError("Variable " + name + " does not exist or could not be fetched");
+			return 1;
+		}
+	}
+	//Sets position to (<setX>,<setY>,<setZ>)
+	setPosition(setX,setY,setZ){
+		try{
+			this.x = setX * 1;
+			this.y = setY * 1;
+			this.z = setZ * 1;
+			return 0;
+		}catch(err){
+			nonFatalError("Could not set position!\n"+err);
+			return 1;
+		}
+	}
+	//Sets rotation to (<setX>,<setY>,<setZ>)
+	setRotation(setX,setY,setZ){
+		try{
+			this.rX = setX * 1;
+			this.rY = setY * 1;
+			this.rZ = setZ * 1;
+			return 0;
+		}catch(err){
+			nonFatalError("Could not set Rotation!\n"+err);
 			return 1;
 		}
 	}
@@ -150,6 +177,16 @@ class Block {
 
 		//Given the code, determine what the user's displayed name and arguments are
 		switch (this.code[0]) {
+			case "setPos":
+				this.name = "Set Self Position";
+				this.args = ["X","Y","Z"];
+				this.color = color('BlueViolet');
+				break;
+			case "setRot":
+				this.name = "Set Self Rotation";
+				this.args = ["X","Y","Z"];
+				this.color = color('BlueViolet');
+				break;
 			case "setIntVar":
 				this.name = "Set Internal Variable";
 				this.args = ["Variable Name", "Value"];
@@ -166,7 +203,7 @@ class Block {
 				this.color = color('DeepSkyBlue');
 				break;
 			default:
-				this.name = this.code[0];
+				this.name = this.code[0] + "\nINVALID FUNCTION!";
 				this.args = [];
 				this.color = color('Red');
 		}
@@ -175,8 +212,8 @@ class Block {
 		//Calculate the longest piece of text and stretch/squash block to fit
 		let blockText = textWidth(this.name);
 		for (let i = 0; i < this.args.length; i++) {
-			if (textWidth(this.code[i + 1] != '' ? this.code[i + 1] : this.args[i]) > blockText) {
-				blockText = textWidth(this.code[i + 1] != '' ? this.code[i + 1] : this.args[i]);
+			if (textWidth(this.args[i] + ": " + this.code[i + 1]) > blockText) {
+				blockText = textWidth(this.args[i] + ": " + this.code[i + 1]);
 			}
 		}
 		fill(this.color);
@@ -191,7 +228,7 @@ class Block {
 		text(this.name, this.x + 5, this.y + 13.5);
 		for (let i = 0; i < this.args.length; i++) {
 			//If the argument is filled out, display that-otherwise, display what it should be
-			text(this.code[i + 1] != '' ? this.code[i + 1] : this.args[i], this.x + 5, this.y + 23.5 + (i + 1) * 20);
+			text(this.args[i] + ": " + this.code[i + 1], this.x + 5, this.y + 23.5 + (i + 1) * 20);
 		}
 		return 30 + this.args.length * 20;
 	}
@@ -342,8 +379,10 @@ function setup() {
 	background(255, 0, 0);
 
 	SYSTEM.window.code.textCodeGraphics  = createGraphics(290,400);
+	//SYSTEM.window.code.input = createDiv('<textarea>yo yo yo</textarea>');
+	//SYSTEM.window.code.input.style('font-size', '16px');
 	
-	MAIN.entities["MainEntity"] = new Entity({}, {}, '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
+	MAIN.entities["MainEntity"] = new Entity({x:0,y:0,z:0}, {x:0,y:0,z:0}, '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
 }
 function draw() {
 	background(70);
@@ -355,6 +394,23 @@ function draw() {
 		scale(1);
 		codeViewTEMP();
 		switch (SYSTEM.window.code.selectedTab) {
+			case "Item":
+				let e = MAIN.entities[SYSTEM.window.code.selectedEntity];
+				fill(255);
+				noStroke();
+				textAlign(LEFT);
+				textSize(15);
+				text(SYSTEM.window.code.selectedEntity, 20, 70);
+				textSize(12);
+				text("Position: (x:" + e.x + " | y: " + e.y + " | z: " + e.z + ")", 20, 95);
+				text("Rotation: (x:" + e.rX + " | y: " + e.rY + " | z: " + e.rZ + ")", 20, 115);
+				text("Internal Variables", 20, 155);
+				let offset = -1;
+				for(let i in e.internalVariables){
+					offset ++;
+					text("	" + i + ": " + e.internalVariables[i], 20, 170 + offset * 15);
+				}
+				break;
 			case "Test":
 				//Start button
 				if (!SYSTEM.window.code.playing) {
@@ -390,6 +446,7 @@ function draw() {
 				rect(60, 50, 25, 25, 2);
 				break;
 			case "Code":
+				
 				//Translation from instructions to more readable code, leading to nicer readability and syntax.
 				if(!SYSTEM.window.code.unsavedCode){
 					let TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
@@ -397,38 +454,6 @@ function draw() {
 					TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g,"i_$1");//Eliminate unnessecary var functions
 					SYSTEM.window.code.unsavedCode = TEMP.split('~');//Split per line
 				}
-				
-				//Line selection
-				if(mouseIsPressed && mouseX > SYSTEM.window.code.x + 300 && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y + 15 && mouseY < SYSTEM.window.code.y + 450){
-					//Math for choosing the line (mouseY offset by location of text rounded by a factor of text height)
-					SYSTEM.window.code.cursor.line = constrain(Math.floor((mouseY - SYSTEM.window.code.y - 50)/20),0,SYSTEM.window.code.unsavedCode.length);
-					//If the line doesn't exist yet, make it
-					if(SYSTEM.window.code.cursor.line == SYSTEM.window.code.unsavedCode.length){
-						SYSTEM.window.code.unsavedCode.push("");
-					}
-					SYSTEM.window.code.cursor.x = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].length;
-				}
-				
-				/** 
-					This is how I prevented text rollover while maintaining smooth movement.
-					I'm aware this is super expensive, but I can't find a workaround that maintains smooth scrolling.
-		 			Accomplished by opening another canvas and writing graphics onto it so rollover is solved via edges.
-				**/
-				SYSTEM.window.code.textCodeGraphics.background(90);
-				SYSTEM.window.code.textCodeGraphics.push();
-				SYSTEM.window.code.textCodeGraphics.translate(SYSTEM.window.code.textCodeOffset,0);
-				for(let i = 0;i < SYSTEM.window.code.unsavedCode.length;i++){
-					let addon = SYSTEM.window.code.cursor.line == i ? (frameCount % 50 > 25 ? "|" : " ") : "";//If the line's selected, framecount interpolation creates a blinking effect
-					SYSTEM.window.code.textCodeGraphics.textSize(12);
-					SYSTEM.window.code.textCodeGraphics.textAlign(LEFT);
-					SYSTEM.window.code.textCodeGraphics.fill(180);
-					SYSTEM.window.code.textCodeGraphics.noStroke();
-					SYSTEM.window.code.textCodeGraphics.text((i + 1) + " | ", 0, 10 + i * 20);
-					SYSTEM.window.code.textCodeGraphics.fill(0); 
-					SYSTEM.window.code.textCodeGraphics.text(SYSTEM.window.code.unsavedCode[i].splice(SYSTEM.window.code.cursor.x, addon, 0), textWidth(i + " | ") + 0, 10 + i * 20);
-				}
-				SYSTEM.window.code.textCodeGraphics.pop();
-				image(SYSTEM.window.code.textCodeGraphics,290,50);
 				
 				//Add on this height to offset the next block
 				let blockOffset = 0;
@@ -452,6 +477,40 @@ function draw() {
 				}catch(err){
 					
 				}
+				
+				//Line selection
+				if(mouseIsPressed && mouseX > SYSTEM.window.code.x + 300 && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y + 15 && mouseY < SYSTEM.window.code.y + 450){
+					//Math for choosing the line (mouseY offset by location of text rounded by a factor of text height)
+					SYSTEM.window.code.cursor.line = constrain(Math.floor((mouseY - SYSTEM.window.code.y - 50)/20),0,SYSTEM.window.code.unsavedCode.length);
+					//If the line doesn't exist yet, make it
+					if(SYSTEM.window.code.cursor.line == SYSTEM.window.code.unsavedCode.length){
+						SYSTEM.window.code.unsavedCode.push("");
+					}
+					SYSTEM.window.code.cursor.x = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].length;
+				}
+				
+				/** 
+					This is how I prevented text rollover while maintaining smooth movement.
+					I'm aware this is super expensive, but I can't find a workaround that maintains smooth scrolling.
+		 			Accomplished by opening another canvas and writing graphics onto it so rollover is solved via edges.
+				**/
+				//SYSTEM.window.code.input.position(SYSTEM.window.code.x,SYSTEM.window.code.y);
+				//SYSTEM.window.code.input.size(100,100);
+				SYSTEM.window.code.textCodeGraphics.background(90);
+				SYSTEM.window.code.textCodeGraphics.push();
+				SYSTEM.window.code.textCodeGraphics.translate(SYSTEM.window.code.textCodeOffset,0);
+				for(let i = 0;i < SYSTEM.window.code.unsavedCode.length;i++){
+					let addon = SYSTEM.window.code.cursor.line == i ? (frameCount % 50 > 25 ? "|" : " ") : "";//If the line's selected, framecount interpolation creates a blinking effect
+					SYSTEM.window.code.textCodeGraphics.textSize(12);
+					SYSTEM.window.code.textCodeGraphics.textAlign(LEFT);
+					SYSTEM.window.code.textCodeGraphics.fill(180);
+					SYSTEM.window.code.textCodeGraphics.noStroke();
+					SYSTEM.window.code.textCodeGraphics.text((i + 1) + " | ", 10, 10 + i * 20);
+					SYSTEM.window.code.textCodeGraphics.fill(0); 
+					SYSTEM.window.code.textCodeGraphics.text(SYSTEM.window.code.unsavedCode[i].splice(SYSTEM.window.code.cursor.x, addon, 0), textWidth((i + 1) + " | ") + 10, 10 + i * 20);
+				}
+				SYSTEM.window.code.textCodeGraphics.pop();
+				image(SYSTEM.window.code.textCodeGraphics,290,50);
 
 				//Represent and save button.
 				if(mouseX > SYSTEM.window.code.x + 275 && mouseX < SYSTEM.window.code.x + 325 && mouseY > SYSTEM.window.code.y + 410 && mouseY < SYSTEM.window.code.y + 435){
