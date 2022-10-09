@@ -1,9 +1,9 @@
 p5.disableFriendlyErrors = true;
 /**
 	Casing rules:
- 	- NAMEOFITEM = Constant, temp variable, or head variables
+		- NAMEOFITEM = Constant, temp variable, or head variables
 	- NameOfItem = Class
-  - nameOfItem = Function, argument, or variable
+	- nameOfItem = Function, argument, or variable
 	- _~~~~~~~~~ = Hint to internal variable for user or dev
 **/
 
@@ -11,26 +11,31 @@ p5.disableFriendlyErrors = true;
 var SYSTEM = {
 	window: {
 		debug: {
-			x: 0,
-			y: 0,
+			x: undefined,
+			y: undefined,
+			w: undefined,
+			h: undefined,
 			msgs: [],
 		},
 		code: {
-			x: 0,
-			y: 300,
+			x: undefined,
+			y: undefined,
+			w: undefined,
+			h: undefined,
 			tabs: ["Entities", "Code", "Item", "Test"],
 			selectedTab: "Entities",
 			selectedEntity: undefined,
 			playing: false,
-			textCodeGraphics: undefined,
-			textCodeOffset: 0,
 			unsavedCode: undefined,
-			cursor:{
-				line: 0,
-				x: 0
-			},
 			input: undefined,
 		},
+		viewport: {
+			x: undefined,
+			y: undefined,
+			w: undefined,
+			h: undefined,
+			g: undefined,
+		}
 	},
 }
 var MAIN = {
@@ -43,7 +48,7 @@ var MAIN = {
 class Entity {
 	constructor(initialPos, initialRot, initialCode, updateCode) {
 		//Initialize variables all entities share
-		this.x = initialPos.x; 
+		this.x = initialPos.x;
 		this.y = initialPos.y;
 		this.z = initialPos.z;
 		this.rX = initialRot.x;
@@ -52,15 +57,15 @@ class Entity {
 		this.internalVariables = {};
 		this.rawInitialCode = initialCode;
 		this.rawUpdateCode = updateCode;
-		
+
 		//Allowing JSONotation to do the heavy lifting of the nested shenanigans
-		this.initialCodeStack = JSON.parse(initialCode.replace(/~/g,','));
-		this.updateCodeStack  = JSON.parse(updateCode.replace(/~/g,','));
+		this.initialCodeStack = JSON.parse(initialCode.replace(/~/g, ','));
+		this.updateCodeStack = JSON.parse(updateCode.replace(/~/g, ','));
 	}
 	initialize() {
 		//De-referencing to get a mutable version without modifying code permanently
 		this._INITIALCODESTACK = JSON.parse(JSON.stringify(this.initialCodeStack));
-		
+
 		//Execute every code statement (ground level, the first blocks)
 		this._INITIALCODESTACK.forEach((item) => { this.EVALUATE_CODE(item); });
 	}
@@ -71,29 +76,29 @@ class Entity {
 		//Execute every code statement (ground level, the first blocks)
 		//this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
 	}
-	
+
 	/** INTERNAL FUNCTIONS **/
 	//The execution of the string-based code provide by the user.
 	EVALUATE_CODE(CODE_INFO) {
 		/**
 			Structure of CODE_INFO:
-	 			CODE_INFO[0]     = What function is being employed
-		 		CODE_INFO[n > 0] = Arguments for said function
+					CODE_INFO[0]     = What function is being employed
+					CODE_INFO[n > 0] = Arguments for said function
 		**/
-		
+
 		//Check for nested functions, evaluate any matches
 		for (let i = 0; i < CODE_INFO.length; i++) {
 			if (Array.isArray(CODE_INFO[i])) {
 				CODE_INFO[i] = this.EVALUATE_CODE(CODE_INFO[i]);
 			}
 		}
-		
+
 		switch (CODE_INFO[0]) {
 			/** Variable manipulation and retrieval **/
 			case "setIntVar": return this.setInternalVariable(CODE_INFO[1], CODE_INFO[2]);
 			case "getIntVar": return this.getInternalVariable(CODE_INFO[1]);
-			case "setPos" :   return this.setPosition(CODE_INFO[1],CODE_INFO[2],CODE_INFO[3]);
-			case "setRot" :   return this.setRotation(CODE_INFO[1],CODE_INFO[2],CODE_INFO[3]);
+			case "setPos": return this.setPosition(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
+			case "setRot": return this.setRotation(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
 
 			/** Operations **/
 			case "concat": return CODE_INFO.slice(1).join('');
@@ -123,7 +128,7 @@ class Entity {
 	}
 	//Returns variable <name>
 	getInternalVariable(name) {
-		if (this.internalVariables[name]){
+		if (this.internalVariables[name]) {
 			return this.internalVariables[name];
 		} else {
 			nonFatalError("Variable " + name + " does not exist or could not be fetched");
@@ -131,26 +136,26 @@ class Entity {
 		}
 	}
 	//Sets position to (<setX>,<setY>,<setZ>)
-	setPosition(setX,setY,setZ){
-		try{
+	setPosition(setX, setY, setZ) {
+		try {
 			this.x = setX * 1;
 			this.y = setY * 1;
 			this.z = setZ * 1;
 			return 0;
-		}catch(err){
-			nonFatalError("Could not set position!\n"+err);
+		} catch (err) {
+			nonFatalError("Could not set position!\n" + err);
 			return 1;
 		}
 	}
 	//Sets rotation to (<setX>,<setY>,<setZ>)
-	setRotation(setX,setY,setZ){
-		try{
+	setRotation(setX, setY, setZ) {
+		try {
 			this.rX = setX * 1;
 			this.rY = setY * 1;
 			this.rZ = setZ * 1;
 			return 0;
-		}catch(err){
-			nonFatalError("Could not set Rotation!\n"+err);
+		} catch (err) {
+			nonFatalError("Could not set Rotation!\n" + err);
 			return 1;
 		}
 	}
@@ -179,12 +184,12 @@ class Block {
 		switch (this.code[0]) {
 			case "setPos":
 				this.name = "Set Self Position";
-				this.args = ["X","Y","Z"];
+				this.args = ["X", "Y", "Z"];
 				this.color = color('BlueViolet');
 				break;
 			case "setRot":
 				this.name = "Set Self Rotation";
-				this.args = ["X","Y","Z"];
+				this.args = ["X", "Y", "Z"];
 				this.color = color('BlueViolet');
 				break;
 			case "setIntVar":
@@ -235,6 +240,17 @@ class Block {
 }
 
 /** Graphical Functions **/
+function Button(args, func) {
+	if (mouseX > args.x + args.offsetX && mouseX < args.x + args.w + args.offsetX && mouseY > args.y + args.offsetY && mouseY < args.y + args.h + args.offsetY) {
+		fill(args.primaryColor + color(20));
+		if (mouseIsPressed) {
+			func();
+		}
+	} else {
+		fill(args.primaryColor);
+	}
+	rect(args.x, args.y, args.w, args.h, 3);
+}
 function debugView() {
 	push();
 	translate(SYSTEM.window.debug.x, SYSTEM.window.debug.y);
@@ -243,9 +259,9 @@ function debugView() {
 	fill(55);
 	stroke(255);
 	strokeWeight(10);
-	rect(5, 5, 290, 150, 5);
+	rect(5, 5, SYSTEM.window.debug.w - 10, SYSTEM.window.debug.h - 10, 5);
 
-	if (mouseX > SYSTEM.window.debug.x && mouseX < SYSTEM.window.debug.x + 300 && mouseY > SYSTEM.window.debug.y && mouseY < SYSTEM.window.debug.y + 15) {
+	if (mouseX > SYSTEM.window.debug.x && mouseX < SYSTEM.window.debug.x + SYSTEM.window.debug.w && mouseY > SYSTEM.window.debug.y && mouseY < SYSTEM.window.debug.y + 15) {
 		if (mouseIsPressed) {
 			SYSTEM.window.debug.x = mouseX - 150;
 			SYSTEM.window.debug.y = mouseY - 7.5;
@@ -255,20 +271,20 @@ function debugView() {
 		fill(90);
 	}
 	noStroke();
-	rect(0, 0, 300, 15, 1);
+	rect(0, 0, SYSTEM.window.debug.w, 15, 1);
 
 	fill(255);
 	noStroke();
-	text(SYSTEM.window.debug.msgs.slice(-5).join('\n'), 15, 20, 270);
+	text(SYSTEM.window.debug.msgs.slice(-5).join('\n'), 15, 20, SYSTEM.window.debug.w - 30);
 	pop();
 }
 function codeViewTEMP() {
 	fill(55);
 	stroke(255);
 	strokeWeight(10);
-	rect(5, 5, 590, 450, 5);
+	rect(5, 5, SYSTEM.window.code.w - 10,SYSTEM.window.code.h - 10, 5);
 
-	if (mouseX > SYSTEM.window.code.x && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y && mouseY < SYSTEM.window.code.y + 15) {
+	if (mouseX > SYSTEM.window.code.x && mouseX < SYSTEM.window.code.x + SYSTEM.window.code.w && mouseY > SYSTEM.window.code.y && mouseY < SYSTEM.window.code.y + 15) {
 		if (mouseIsPressed) {
 			SYSTEM.window.code.x = mouseX - 150;
 			SYSTEM.window.code.y = mouseY - 7.5;
@@ -278,7 +294,7 @@ function codeViewTEMP() {
 		fill(90);
 	}
 	noStroke();
-	rect(0, 0, 600, 15, 1);
+	rect(0, 0, SYSTEM.window.code.w, 15, 1);
 
 	//Display all tabs
 	SYSTEM.window.code.tabs.forEach((item, ind) => {
@@ -288,6 +304,7 @@ function codeViewTEMP() {
 		if (mouseX > SYSTEM.window.code.x + 15 + ind * 50 && mouseX < SYSTEM.window.code.x + 50 + 15 + ind * 50 && mouseY > SYSTEM.window.code.y + 19 && mouseY < SYSTEM.window.code.y + 39) {
 			if (mouseIsPressed) {
 				SYSTEM.window.code.selectedTab = item;
+				document.getElementById('codeWindow').style.display = "none";
 			}
 			fill(110);
 		} else {
@@ -303,7 +320,7 @@ function codeViewTEMP() {
 		text(item, 40 + ind * 50, 32.5);
 	});
 	fill(90);
-	rect(5, 36, 590, 419, 5)
+	rect(5, 36, SYSTEM.window.code.w - 10, SYSTEM.window.code.h - 41, 5)
 }
 
 /** Debug Functions **/
@@ -313,82 +330,53 @@ function printMsg(msg) {
 function nonFatalError(msg) {
 	SYSTEM.window.debug.msgs.push("Warning: " + msg);
 }
-function syntaxError(msg){
+function syntaxError(msg) {
 	SYSTEM.window.debug.msgs.push("Syntax error: " + msg);
 }
 
 //String splice function. Identical to Array.splice
 String.prototype.splice = function(ind, str, rem) {
-    return this.slice(0, ind) + str + this.slice(ind + rem);
+	return this.slice(0, ind) + str + this.slice(ind + rem);
 };
 function keyPressed() {
-  if (keyCode === LEFT_ARROW) {
-		//Shift cursor left
-		if(SYSTEM.window.code.selectedTab == "Code"){
-			SYSTEM.window.code.cursor.x = abs(SYSTEM.window.code.cursor.x - 1);
-		}
-  }
-	if(keyCode === RIGHT_ARROW) {
-		//Shift cursor right
-		if(SYSTEM.window.code.selectedTab == "Code"){
-			SYSTEM.window.code.cursor.x += 1;
-		}
-  }
-	if(keyCode === 8){
-		if(SYSTEM.window.code.selectedTab == "Code"){
-			if(SYSTEM.window.code.cursor.x != 0){
-				SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].splice(SYSTEM.window.code.cursor.x - 1,"",1)
-				//Maintain cursor position
-				SYSTEM.window.code.cursor.x -= 1;
-			}else if(SYSTEM.window.code.cursor.line != 0){
-				//Move the cursor to the middleground of the previous sentence and currrent line
-				SYSTEM.window.code.cursor.x = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line-1].length;
-				//Add any existing content onto the previous line
-				SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line-1] += SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line];
-				//Delete the current line
-				SYSTEM.window.code.unsavedCode.splice(SYSTEM.window.code.cursor.line,1);
-				//Move the cursor back a line
-				SYSTEM.window.code.cursor.line -= 1;
-			}
-		}
-	}
 }
-function keyTyped(){
-	if(SYSTEM.window.code.selectedTab == "Code"){
-		if(key != "Enter"){
-			//Insert <key> at <cursor x> on line <cursor line>
-			SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].splice(SYSTEM.window.code.cursor.x,key,0);
-			//Maintain cursor position
-			SYSTEM.window.code.cursor.x += 1;
-		}else{
-			SYSTEM.window.code.unsavedCode.splice(SYSTEM.window.code.cursor.line + 1,0,SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].slice(SYSTEM.window.code.cursor.x));
-			//Preserve any old content on the old line minus what was after cursor
-			SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line] = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].slice(0,SYSTEM.window.code.cursor.x);
-		}
-	}
-}
-function mouseWheel(event){
-	//Mousewheel scrolling for the rightmost (text)
-	if(SYSTEM.window.code.selectedTab == "Code" && mouseX > SYSTEM.window.code.x + 300 && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y + 15 && mouseY < SYSTEM.window.code.y + 400){
-		SYSTEM.window.code.textCodeOffset -= event.delta / 2;
-	}
+function mouseWheel(event) {
 }
 function setup() {
 	//Initialize sketch
-	createCanvas(windowWidth, windowHeight);
+	createCanvas(max(windowWidth,400), max(400,windowHeight));
 	background(255, 0, 0);
 
-	SYSTEM.window.code.textCodeGraphics  = createGraphics(290,400);
-	//SYSTEM.window.code.input = createDiv('<textarea>yo yo yo</textarea>');
-	//SYSTEM.window.code.input.style('font-size', '16px');
+	//Initialize window sizes and graphics
+	SYSTEM.window.debug.x = 0;
+	SYSTEM.window.debug.y = 0;
+	SYSTEM.window.debug.w = windowWidth / 4;
+	SYSTEM.window.debug.h = (windowHeight / 5) * 2;
 	
-	MAIN.entities["MainEntity"] = new Entity({x:0,y:0,z:0}, {x:0,y:0,z:0}, '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
+	SYSTEM.window.code.x = 0;
+	SYSTEM.window.code.y = (windowHeight / 5) * 2;
+	SYSTEM.window.code.w = windowWidth;
+	SYSTEM.window.code.h = (windowHeight / 5 ) * 3;
+
+	SYSTEM.window.viewport.x = windowWidth/4;
+	SYSTEM.window.viewport.y = 0;
+	SYSTEM.window.viewport.w = (windowWidth / 4) * 3;
+	SYSTEM.window.viewport.h = (windowHeight / 5) * 2;
+	SYSTEM.window.viewport.g = createGraphics(SYSTEM.window.viewport.w, SYSTEM.window.viewport.h, WEBGL);
+	
+	
+	//Initialize textbox
+	SYSTEM.window.code.input = createDiv('<style>.example { width: ' + (SYSTEM.window.code.w / 2 - 20) + 'px; height:' + (SYSTEM.window.code.h - 150) + 'px}</style> <textarea id="codeWindow" class="example" rows="5000" cols="500000" placeholder="Code" spellcheck="false"></textarea>');
+	SYSTEM.window.code.input.style('font-size', '16px');
+
+	//TEMP: add entity
+	MAIN.entities["MainEntity"] = new Entity({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
 }
 function draw() {
 	background(70);
 	try {
 		debugView();
-		
+
 		push();
 		translate(SYSTEM.window.code.x, SYSTEM.window.code.y);
 		scale(1);
@@ -406,8 +394,8 @@ function draw() {
 				text("Rotation: (x:" + e.rX + " | y: " + e.rY + " | z: " + e.rZ + ")", 20, 115);
 				text("Internal Variables", 20, 155);
 				let offset = -1;
-				for(let i in e.internalVariables){
-					offset ++;
+				for (let i in e.internalVariables) {
+					offset++;
 					text("	" + i + ": " + e.internalVariables[i], 20, 170 + offset * 15);
 				}
 				break;
@@ -431,7 +419,7 @@ function draw() {
 					stroke(170);
 				}
 				triangle(20, 50, 45, 62.5, 20, 75);
-				
+
 				//Stop button
 				if (SYSTEM.window.code.playing) {
 					if (mouseX > SYSTEM.window.code.x + 60 && mouseX < SYSTEM.window.code.x + 85 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
@@ -446,99 +434,67 @@ function draw() {
 				rect(60, 50, 25, 25, 2);
 				break;
 			case "Code":
-				
+
 				//Translation from instructions to more readable code, leading to nicer readability and syntax.
-				if(!SYSTEM.window.code.unsavedCode){
+				if (!SYSTEM.window.code.unsavedCode) {
 					let TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
-					TEMP = TEMP.slice(1,-1);//Ignore edge brackets for readability
-					TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g,"i_$1");//Eliminate unnessecary var functions
-					SYSTEM.window.code.unsavedCode = TEMP.split('~');//Split per line
+					TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
+					TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
+					SYSTEM.window.code.unsavedCode = TEMP.replace(/~/g, '\n')//Split per line
+					document.getElementById('codeWindow').innerHTML = SYSTEM.window.code.unsavedCode;
 				}
-				
+				SYSTEM.window.code.input.position(SYSTEM.window.code.x + (SYSTEM.window.code.w / 2), SYSTEM.window.code.y + 50.5);
+				SYSTEM.window.code.unsavedCode = document.getElementById('codeWindow').value;
+				document.getElementById('codeWindow').style.display = "block";
+
 				//Add on this height to offset the next block
 				let blockOffset = 0;
-					// NON AUTOMATIC BLOCKING!!!! LEAVE THIS IN CASE OF REVERT
-					//let initialCodeList = MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack;
-				try{
-					let TEMP = SYSTEM.window.code.unsavedCode.filter((a)=>a).join('~');
-					TEMP = TEMP.replace(/i_(\w+)/g,'["getIntVar","$1"]');
+				try {
+					let TEMP = SYSTEM.window.code.unsavedCode.split('\n').filter((a) => a).join('~');
+					TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
 					TEMP = '[' + TEMP + ']';
-					let initialCodeList = JSON.parse(TEMP.replace(/~/g,','));
-					
+					let initialCodeList = JSON.parse(TEMP.replace(/~/g, ','));
+
 					//Represent all SAVED code as blocks.
 					initialCodeList.forEach((i) => {
-						try{
+						try {
 							let block = new Block(i, 20, 50.5 + blockOffset);
 							blockOffset += block.render();
-						}catch{
-							
+						} catch {
+
 						}
 					});
-				}catch(err){
-					
-				}
-				
-				//Line selection
-				if(mouseIsPressed && mouseX > SYSTEM.window.code.x + 300 && mouseX < SYSTEM.window.code.x + 600 && mouseY > SYSTEM.window.code.y + 15 && mouseY < SYSTEM.window.code.y + 450){
-					//Math for choosing the line (mouseY offset by location of text rounded by a factor of text height)
-					SYSTEM.window.code.cursor.line = constrain(Math.floor((mouseY - SYSTEM.window.code.y - 50)/20),0,SYSTEM.window.code.unsavedCode.length);
-					//If the line doesn't exist yet, make it
-					if(SYSTEM.window.code.cursor.line == SYSTEM.window.code.unsavedCode.length){
-						SYSTEM.window.code.unsavedCode.push("");
-					}
-					SYSTEM.window.code.cursor.x = SYSTEM.window.code.unsavedCode[SYSTEM.window.code.cursor.line].length;
-				}
-				
-				/** 
-					This is how I prevented text rollover while maintaining smooth movement.
-					I'm aware this is super expensive, but I can't find a workaround that maintains smooth scrolling.
-		 			Accomplished by opening another canvas and writing graphics onto it so rollover is solved via edges.
-				**/
-				//SYSTEM.window.code.input.position(SYSTEM.window.code.x,SYSTEM.window.code.y);
-				//SYSTEM.window.code.input.size(100,100);
-				SYSTEM.window.code.textCodeGraphics.background(90);
-				SYSTEM.window.code.textCodeGraphics.push();
-				SYSTEM.window.code.textCodeGraphics.translate(SYSTEM.window.code.textCodeOffset,0);
-				for(let i = 0;i < SYSTEM.window.code.unsavedCode.length;i++){
-					let addon = SYSTEM.window.code.cursor.line == i ? (frameCount % 50 > 25 ? "|" : " ") : "";//If the line's selected, framecount interpolation creates a blinking effect
-					SYSTEM.window.code.textCodeGraphics.textSize(12);
-					SYSTEM.window.code.textCodeGraphics.textAlign(LEFT);
-					SYSTEM.window.code.textCodeGraphics.fill(180);
-					SYSTEM.window.code.textCodeGraphics.noStroke();
-					SYSTEM.window.code.textCodeGraphics.text((i + 1) + " | ", 10, 10 + i * 20);
-					SYSTEM.window.code.textCodeGraphics.fill(0); 
-					SYSTEM.window.code.textCodeGraphics.text(SYSTEM.window.code.unsavedCode[i].splice(SYSTEM.window.code.cursor.x, addon, 0), textWidth((i + 1) + " | ") + 10, 10 + i * 20);
-				}
-				SYSTEM.window.code.textCodeGraphics.pop();
-				image(SYSTEM.window.code.textCodeGraphics,290,50);
+				} catch (err) {
 
-				//Represent and save button.
-				if(mouseX > SYSTEM.window.code.x + 275 && mouseX < SYSTEM.window.code.x + 325 && mouseY > SYSTEM.window.code.y + 410 && mouseY < SYSTEM.window.code.y + 435){
-					fill(200,0,0);
-					if(mouseIsPressed){
-						try{
-							/**
-								Line 1: Remove sparse entries and compile array
-								Line 2: Change variables back to machine-readable instructions
-								Line 3: Make said instructions JSON friendly
-								Line 4: Attempt to parse code into array form and update the entity's instructions
-								Line 5: Update the entity's raw code
-							**/
-							let TEMP = SYSTEM.window.code.unsavedCode.filter((a)=>a).join('~');
-							TEMP = TEMP.replace(/i_(\w+)/g,'["getIntVar","$1"]');
-							TEMP = '[' + TEMP + ']';
-							MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g,','));
-							MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
-						}catch(err){
-							//Spam the error (cry about it)
-							syntaxError("COULD NOT COMPILE! "+err)
-						}
-					}
-				}else{
-					fill(255,0,0);
 				}
-				noStroke();
-				rect(275,410,50,25,3);
+				//Represent and save button.
+				Button({
+					x: (SYSTEM.window.code.w / 2) - 25,
+					y: SYSTEM.window.code.h - 50,
+					offsetX: SYSTEM.window.code.x,
+					offsetY: SYSTEM.window.code.y,
+					w: 50,
+					h: 25,
+					primaryColor: color(120),
+				}, () => {
+					try {
+						/**
+							Line 1: Swap breaks for seperator
+							Line 2: Change variables back to machine-readable instructions
+							Line 3: Make said instructions JSON friendly
+							Line 4: Attempt to parse code into array form and update the entity's instructions
+							Line 5: Update the entity's raw code
+						**/
+						let TEMP = SYSTEM.window.code.unsavedCode.split('\n').filter((a) => a).join('~');
+						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
+						TEMP = '[' + TEMP + ']';
+						MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
+						MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
+					} catch (err) {
+						//Spam the error (cry about it)
+						syntaxError("COULD NOT COMPILE! " + err)
+					}
+				})
 				break;
 			case "Entities":
 				let ind = -1;
