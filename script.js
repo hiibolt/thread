@@ -1,7 +1,7 @@
 p5.disableFriendlyErrors = true;
 /**
 	Casing rules:
-		- NAMEOFITEM = Constant, temp variable, or head variables
+	- NAMEOFITEM = Constant, temp variable, or head variables
 	- NameOfItem = Class
 	- nameOfItem = Function, argument, or variable
 	- _~~~~~~~~~ = Hint to internal variable for user or dev
@@ -79,12 +79,14 @@ class Entity {
 		//Execute every code statement (ground level, the first blocks)
 		this._INITIALCODESTACK.forEach((item) => { this.EVALUATE_CODE(item); });
 	}
-	update(g) {
+	update() {
 		/** Don't implement this until you're there **/
 		//De-referencing for to get a mutable version without modifying code permanently
 		//this._UPDATECODESTACK = JSON.parse(JSON.stringify(this.updateCodeStack));
 		//Execute every code statement (ground level, the first blocks)
 		//this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
+	}
+	render(g) {
 		g.push();
 		g.translate(this.x,this.y,this.z);
 		//g.rotate(this.rX,this.rY,this.rZ);
@@ -591,14 +593,16 @@ function draw() {
 	vp.g.fill(0);
 	vp.g.box(500,5,500);
 	vp.g.pop();
-
+	
 	//Update and render all entities
 	if (SYSTEM.window.code.playing) {
 		for (let entity in MAIN.entities) {
-			MAIN.entities[entity].update(SYSTEM.window.viewport.g);
+			MAIN.entities[entity].update();
 		}
 	}
-		
+	for(let entity in MAIN.entities){
+		MAIN.entities[entity].render(SYSTEM.window.viewport.g);
+	}
 	//Update and set viewport camera
 	if(mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10){
 		vp.camera.x_r += movedX / 50;
