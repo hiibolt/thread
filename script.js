@@ -54,14 +54,16 @@ var MAIN = {
 /** Classes **/
 //Host entity. Core framework of what the user utilizes.
 class Entity {
-	constructor(initialPos, initialRot, initialCode, updateCode) {
+	constructor(initialTransform, model, initialCode, updateCode) {
 		//Initialize variables all entities share
-		this.x = initialPos.x;
-		this.y = initialPos.y;
-		this.z = initialPos.z;
-		this.rX = initialRot.x;
-		this.rY = initialRot.y;
-		this.rZ = initialRot.z;
+		this.x = initialTransform.x;
+		this.y = initialTransform.y;
+		this.z = initialTransform.z;
+		//this.rX = initialTransform.r_x;
+		//this.rY = initialTransform.r_y;
+		//this.rZ = initialTransform.r_z;
+		this.scale = initialTransform.scale;;
+		this.model = model;
 		this.internalVariables = {};
 		this.rawInitialCode = initialCode;
 		this.rawUpdateCode = updateCode;
@@ -77,12 +79,27 @@ class Entity {
 		//Execute every code statement (ground level, the first blocks)
 		this._INITIALCODESTACK.forEach((item) => { this.EVALUATE_CODE(item); });
 	}
-	update() {
+	update(g) {
 		/** Don't implement this until you're there **/
 		//De-referencing for to get a mutable version without modifying code permanently
 		//this._UPDATECODESTACK = JSON.parse(JSON.stringify(this.updateCodeStack));
 		//Execute every code statement (ground level, the first blocks)
 		//this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
+		g.push();
+		g.translate(this.x,this.y,this.z);
+		//g.rotate(this.rX,this.rY,this.rZ);
+		switch(this.model){
+			case "box":
+				g.fill(0);
+				g.stroke(255);
+				g.strokeWeight(2);
+				g.box(5 * this.scale);
+				break;
+			default:
+				//insert custom model code right here lol
+				break;
+		}
+		g.pop();
 	}
 
 	/** INTERNAL FUNCTIONS **/
@@ -377,7 +394,7 @@ function setup() {
 	SYSTEM.window.code.input.style('font-size', '16px');
 
 	//TEMP: add entity
-	MAIN.entities["MainEntity"] = new Entity({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
+	MAIN.entities["MainEntity"] = new Entity({ x: 90, y: 0, z: 50, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
 }
 function draw() {
 	background(70);
@@ -567,31 +584,32 @@ function draw() {
 	let vp = SYSTEM.window.viewport;
 	vp.g.clear();
 	vp.g.background(135,206,235);
-		
-	vp.g.push();
-	vp.g.fill(0);
-	vp.g.box(5);
-	vp.g.pop();
 
+	//Floor [TEMP]
 	vp.g.push();
 	vp.g.translate(0,50,0)
 	vp.g.fill(0);
 	vp.g.box(500,5,500);
 	vp.g.pop();
+
+	//Update and render all entities
+	if (SYSTEM.window.code.playing) {
+		for (let entity in MAIN.entities) {
+			MAIN.entities[entity].update(SYSTEM.window.viewport.g);
+		}
+	}
 		
-	vp.g.camera(vp.camera.x,vp.camera.y,vp.camera.z,vp.camera.x + cos(vp.camera.x_r),vp.camera.y + vp.camera.y_r,vp.camera.z + sin(vp.camera.x_r));
+	//Update and set viewport camera
 	if(mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10){
 		vp.camera.x_r += movedX / 50;
 		vp.camera.y_r += movedY / 50;
-	}
+	}	
+	vp.g.camera(vp.camera.x,vp.camera.y,vp.camera.z,vp.camera.x + cos(vp.camera.x_r),vp.camera.y + vp.camera.y_r,vp.camera.z + sin(vp.camera.x_r));
+
+	//Render viewport
 	image(SYSTEM.window.viewport.g,SYSTEM.window.viewport.x + 10,SYSTEM.window.viewport.y + 15);
 		
 		//Update all entities
-		if (SYSTEM.window.code.playing) {
-			for (let entity in MAIN.entities) {
-				MAIN.entities[entity].update(SYSTEM.window.viewport.g);
-			}
-		}
 	} catch (err) {
 		background(120);
 		fill(255);
