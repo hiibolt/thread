@@ -35,6 +35,14 @@ var SYSTEM = {
 			w: undefined,
 			h: undefined,
 			g: undefined,
+			
+			camera:{
+				x: 100,
+				y: 10,
+				z: 0,
+				x_r: 0,
+				y_r: 0,
+			}
 		}
 	},
 }
@@ -362,8 +370,7 @@ function setup() {
 	SYSTEM.window.viewport.y = 0;
 	SYSTEM.window.viewport.w = (windowWidth / 4) * 3;
 	SYSTEM.window.viewport.h = (windowHeight / 5) * 2;
-	SYSTEM.window.viewport.g = createGraphics(SYSTEM.window.viewport.w, SYSTEM.window.viewport.h, WEBGL);
-	
+	SYSTEM.window.viewport.g = createGraphics(SYSTEM.window.viewport.w - 20, SYSTEM.window.viewport.h  - 25, WEBGL);
 	
 	//Initialize textbox
 	SYSTEM.window.code.input = createDiv('<style>.example { width: ' + (SYSTEM.window.code.w / 2 - 20) + 'px; height:' + (SYSTEM.window.code.h - 150) + 'px}</style> <textarea id="codeWindow" class="example" rows="5000" cols="500000" placeholder="Code" spellcheck="false"></textarea>');
@@ -375,8 +382,10 @@ function setup() {
 function draw() {
 	background(70);
 	try {
+		//Console
 		debugView();
 
+		//Codebox
 		push();
 		translate(SYSTEM.window.code.x, SYSTEM.window.code.y);
 		scale(1);
@@ -527,11 +536,60 @@ function draw() {
 				break;
 		}
 		pop();
+		
+		//Viewport
+		push();
+		translate(SYSTEM.window.viewport.x, SYSTEM.window.viewport.y);
+		fill(55);
+		stroke(255);
+		strokeWeight(10);
+		rect(5, 5, SYSTEM.window.viewport.w - 10, SYSTEM.window.viewport.h - 10, 5);
+		if (mouseX > SYSTEM.window.viewport.x && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w && mouseY > SYSTEM.window.viewport.y && mouseY < SYSTEM.window.viewport.y + 15) {
+		if (mouseIsPressed) {
+			SYSTEM.window.viewport.x = mouseX - 150;
+			SYSTEM.window.viewport.y = mouseY - 7.5;
+		}
+		fill(110);
+	} else {
+		fill(90);
+	}
+	noStroke();
+	rect(0, 0, SYSTEM.window.viewport.w, 15, 1);
+	pop();
+	
+	/**
+   vp = Shorthand for viewport variables
+   g = Graphical canvas
+	 camera = Variable set for camera
+	 x/y/z = X, y, and z coordinates
+	 r = Rotation
+	**/
+	let vp = SYSTEM.window.viewport;
+	vp.g.clear();
+	vp.g.background(135,206,235);
+		
+	vp.g.push();
+	vp.g.fill(0);
+	vp.g.box(5);
+	vp.g.pop();
 
+	vp.g.push();
+	vp.g.translate(0,50,0)
+	vp.g.fill(0);
+	vp.g.box(500,5,500);
+	vp.g.pop();
+		
+	vp.g.camera(vp.camera.x,vp.camera.y,vp.camera.z,vp.camera.x + cos(vp.camera.x_r),vp.camera.y + vp.camera.y_r,vp.camera.z + sin(vp.camera.x_r));
+	if(mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10){
+		vp.camera.x_r += movedX / 50;
+		vp.camera.y_r += movedY / 50;
+	}
+	image(SYSTEM.window.viewport.g,SYSTEM.window.viewport.x + 10,SYSTEM.window.viewport.y + 15);
+		
 		//Update all entities
 		if (SYSTEM.window.code.playing) {
 			for (let entity in MAIN.entities) {
-				MAIN.entities[entity].update();
+				MAIN.entities[entity].update(SYSTEM.window.viewport.g);
 			}
 		}
 	} catch (err) {
