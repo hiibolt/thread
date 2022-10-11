@@ -27,7 +27,8 @@ var SYSTEM = {
 			selectedEntity: undefined,
 			playing: false,
 			codeType: true, //true = initial code, false = update code
-			unsavedCode: undefined,
+			unsavedInitialCode: undefined,
+			unsavedUpdateCode: undefined,
 			input: undefined,
 		},
 		viewport: {
@@ -397,7 +398,7 @@ function setup() {
 	SYSTEM.window.code.input.style('font-size', '16px');
 
 	//TEMP: add entity
-	MAIN.entities["MainEntity"] = new Entity({ x: 90, y: 0, z: 50, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', "[]");
+	MAIN.entities["MainEntity"] = new Entity({ x: 90, y: 0, z: 50, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', '[["setPos",0,0,0]]');
 }
 function draw() {
 	background(70);
@@ -465,41 +466,59 @@ function draw() {
 			case "Code":
 
 				//Translation from instructions to more readable code, leading to nicer readability and syntax.
-				if (!SYSTEM.window.code.unsavedCode) {
-					let TEMP;
-					if (SYSTEM.window.code.codeType){
-						TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
-					}else{
-						TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode;
-					}
-					TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
-					TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
-					SYSTEM.window.code.unsavedCode = TEMP.replace(/~/g, '\n')//Split per line
-					document.getElementById('codeWindow').innerHTML = SYSTEM.window.code.unsavedCode;
-				}
-				SYSTEM.window.code.input.position(SYSTEM.window.code.x + (SYSTEM.window.code.w / 2), SYSTEM.window.code.y + 50.5);
-				SYSTEM.window.code.unsavedCode = document.getElementById('codeWindow').value;
-				document.getElementById('codeWindow').style.display = "block";
+				switch(SYSTEM.window.code.codeType){
+					case true:
+						SYSTEM.window.code.input.position(SYSTEM.window.code.x + (SYSTEM.window.code.w / 2), SYSTEM.window.code.y + 50.5);
+						SYSTEM.window.code.unsavedInitialCode = document.getElementById('codeWindow').value;
+						document.getElementById('codeWindow').style.display = "block";
 
-				//Add on this height to offset the next block
-				let blockOffset = 0;
-				try {
-					let TEMP = SYSTEM.window.code.unsavedCode.split('\n').filter((a) => a).join('~');
-					TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
-					TEMP = '[' + TEMP + ']';
-					let codeList = JSON.parse(TEMP.replace(/~/g, ','));
-
-					//Represent all SAVED code as blocks.
-					codeList.forEach((i) => {
+						//Add on this height to offset the next block
+						var blockOffset = 0;
 						try {
-							let block = new Block(i, 20, 50.5 + blockOffset);
-							blockOffset += block.render();
-						} catch {
+							let TEMP = SYSTEM.window.code.unsavedInitialCode.split('\n').filter((a) => a).join('~');
+							TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
+							TEMP = '[' + TEMP + ']';
+							let codeList = JSON.parse(TEMP.replace(/~/g, ','));
 
+							//Represent all SAVED code as blocks.
+							codeList.forEach((i) => {
+								try {
+									let block = new Block(i, 20, 50.5 + blockOffset);
+									blockOffset += block.render();
+								} catch {
+
+								}
+							});
+						} catch (err) {
+							
 						}
-					});
-				} catch (err) {
+						break;
+					case false:
+						SYSTEM.window.code.input.position(SYSTEM.window.code.x + (SYSTEM.window.code.w / 2), SYSTEM.window.code.y + 50.5);
+						SYSTEM.window.code.unsavedUpdateCode = document.getElementById('codeWindow').value;
+						document.getElementById('codeWindow').style.display = "block";
 
+						//Add on this height to offset the next block
+						var blockOffset = 0;
+						try {
+							let TEMP = SYSTEM.window.code.unsavedUpdateCode.split('\n').filter((a) => a).join('~');
+							TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
+							TEMP = '[' + TEMP + ']';
+							let codeList = JSON.parse(TEMP.replace(/~/g, ','));
+
+							//Represent all SAVED code as blocks.
+							codeList.forEach((i) => {
+								try {
+									let block = new Block(i, 20, 50.5 + blockOffset);
+									blockOffset += block.render();
+								} catch {
+
+								}
+							});
+						} catch (err) {
+							
+						}
+						break;
 				}
 				//Swap between initial and update code
 				Button({
@@ -512,7 +531,7 @@ function draw() {
 					primaryColor: color(120),
 				}, () => {
 					SYSTEM.window.code.codeType = false;
-					SYSTEM.window.code.unsavedCode = undefined;
+					document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedUpdateCode;
 				});
 				Button({
 					x: (SYSTEM.window.code.w / 2) - 135,
@@ -523,9 +542,8 @@ function draw() {
 					h: 25,
 					primaryColor: color(120),
 				}, () => {
-					
 					SYSTEM.window.code.codeType = true;
-					SYSTEM.window.code.unsavedCode = undefined;
+					document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedInitialCode;
 				});
 				//Represent and save button.
 				Button({
@@ -545,16 +563,19 @@ function draw() {
 							Line 4: Attempt to parse code into array form and update the entity's instructions
 							Line 5: Update the entity's raw code
 						**/
-						let TEMP = SYSTEM.window.code.unsavedCode.split('\n').filter((a) => a).join('~');
+						
+						var TEMP = SYSTEM.window.code.unsavedInitialCode.split('\n').filter((a) => a).join('~');
 						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
 						TEMP = '[' + TEMP + ']';
-						if(SYSTEM.window.code.codeType){
-							MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
-							MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
-						}else{
-							MAIN.entities[SYSTEM.window.code.selectedEntity].updateCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
-							MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode = TEMP;
-						}
+						MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
+						MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
+
+						var TEMP = SYSTEM.window.code.unsavedUpdateCode.split('\n').filter((a) => a).join('~');
+						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
+						TEMP = '[' + TEMP + ']';
+						MAIN.entities[SYSTEM.window.code.selectedEntity].updateCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
+						MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode = TEMP;
+						
 					} catch (err) {
 						//Spam the error (cry about it)
 						syntaxError("COULD NOT COMPILE! " + err)
@@ -576,6 +597,16 @@ function draw() {
 					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 120 && mouseY > SYSTEM.window.code.y + 73.5 + ind * 50 && mouseY < SYSTEM.window.code.y + 40 + 73.5 + ind * 50) {
 						if (mouseIsPressed) {
 							SYSTEM.window.code.selectedEntity = key;
+							var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
+							TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
+							TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
+							SYSTEM.window.code.unsavedInitialCode = TEMP.replace(/~/g, '\n')//Split per line
+							document.getElementById('codeWindow').innerHTML = SYSTEM.window.code.unsavedInitialCode;
+							
+							var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode;
+							TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
+							TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
+							SYSTEM.window.code.unsavedUpdateCode = TEMP.replace(/~/g, '\n')//Split per line
 						}
 						fill(140);
 					} else {
