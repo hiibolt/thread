@@ -26,6 +26,7 @@ var SYSTEM = {
 			selectedTab: "Entities",
 			selectedEntity: undefined,
 			playing: false,
+			codeType: true, //true = initial code, false = update code
 			unsavedCode: undefined,
 			input: undefined,
 		},
@@ -82,9 +83,9 @@ class Entity {
 	update() {
 		/** Don't implement this until you're there **/
 		//De-referencing for to get a mutable version without modifying code permanently
-		//this._UPDATECODESTACK = JSON.parse(JSON.stringify(this.updateCodeStack));
+		this._UPDATECODESTACK = JSON.parse(JSON.stringify(this.updateCodeStack));
 		//Execute every code statement (ground level, the first blocks)
-		//this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
+		this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
 	}
 	render(g) {
 		g.push();
@@ -465,7 +466,12 @@ function draw() {
 
 				//Translation from instructions to more readable code, leading to nicer readability and syntax.
 				if (!SYSTEM.window.code.unsavedCode) {
-					let TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
+					let TEMP;
+					if (SYSTEM.window.code.codeType){
+						TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
+					}else{
+						TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode;
+					}
 					TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
 					TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
 					SYSTEM.window.code.unsavedCode = TEMP.replace(/~/g, '\n')//Split per line
@@ -481,10 +487,10 @@ function draw() {
 					let TEMP = SYSTEM.window.code.unsavedCode.split('\n').filter((a) => a).join('~');
 					TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
 					TEMP = '[' + TEMP + ']';
-					let initialCodeList = JSON.parse(TEMP.replace(/~/g, ','));
+					let codeList = JSON.parse(TEMP.replace(/~/g, ','));
 
 					//Represent all SAVED code as blocks.
-					initialCodeList.forEach((i) => {
+					codeList.forEach((i) => {
 						try {
 							let block = new Block(i, 20, 50.5 + blockOffset);
 							blockOffset += block.render();
@@ -495,9 +501,35 @@ function draw() {
 				} catch (err) {
 
 				}
+				//Swap between initial and update code
+				Button({
+					x: (SYSTEM.window.code.w / 2) - 75,
+					y: SYSTEM.window.code.h - 50,
+					offsetX: SYSTEM.window.code.x,
+					offsetY: SYSTEM.window.code.y,
+					w: 50,
+					h: 25,
+					primaryColor: color(120),
+				}, () => {
+					SYSTEM.window.code.codeType = false;
+					SYSTEM.window.code.unsavedCode = undefined;
+				});
+				Button({
+					x: (SYSTEM.window.code.w / 2) - 135,
+					y: SYSTEM.window.code.h - 50,
+					offsetX: SYSTEM.window.code.x,
+					offsetY: SYSTEM.window.code.y,
+					w: 50,
+					h: 25,
+					primaryColor: color(120),
+				}, () => {
+					
+					SYSTEM.window.code.codeType = true;
+					SYSTEM.window.code.unsavedCode = undefined;
+				});
 				//Represent and save button.
 				Button({
-					x: (SYSTEM.window.code.w / 2) - 25,
+					x: (SYSTEM.window.code.w / 2) + 25,
 					y: SYSTEM.window.code.h - 50,
 					offsetX: SYSTEM.window.code.x,
 					offsetY: SYSTEM.window.code.y,
@@ -516,13 +548,18 @@ function draw() {
 						let TEMP = SYSTEM.window.code.unsavedCode.split('\n').filter((a) => a).join('~');
 						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
 						TEMP = '[' + TEMP + ']';
-						MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
-						MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
+						if(SYSTEM.window.code.codeType){
+							MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
+							MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
+						}else{
+							MAIN.entities[SYSTEM.window.code.selectedEntity].updateCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
+							MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode = TEMP;
+						}
 					} catch (err) {
 						//Spam the error (cry about it)
 						syntaxError("COULD NOT COMPILE! " + err)
 					}
-				})
+				});
 				break;
 			case "Entities":
 				let ind = -1;
