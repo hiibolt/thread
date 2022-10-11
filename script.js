@@ -37,8 +37,8 @@ var SYSTEM = {
 			w: undefined,
 			h: undefined,
 			g: undefined,
-			
-			camera:{
+
+			camera: {
 				x: 100,
 				y: 10,
 				z: 0,
@@ -86,13 +86,13 @@ class Entity {
 		//De-referencing for to get a mutable version without modifying code permanently
 		this._UPDATECODESTACK = JSON.parse(JSON.stringify(this.updateCodeStack));
 		//Execute every code statement (ground level, the first blocks)
-		this._UPDATECODESTACK.forEach((item) => {this.EVALUATE_CODE(item);});
+		this._UPDATECODESTACK.forEach((item) => { this.EVALUATE_CODE(item); });
 	}
 	render(g) {
 		g.push();
-		g.translate(this.x,this.y,this.z);
+		g.translate(this.x, this.y, this.z);
 		//g.rotate(this.rX,this.rY,this.rZ);
-		switch(this.model){
+		switch (this.model) {
 			case "box":
 				g.fill(0);
 				g.stroke(255);
@@ -250,21 +250,26 @@ class Block {
 				blockText = textWidth(this.args[i] + ": " + this.code[i + 1]);
 			}
 		}
-		fill(this.color);
-		stroke(lerpColor(this.color, color(10), 0.2));
-		strokeWeight(3);
-		rect(this.x, this.y, blockText + 10, 30 + this.args.length * 20, 5);
-
-		fill(0, 0, 0);
-		textAlign(LEFT);
-		textSize(12);
-		noStroke();
-		text(this.name, this.x + 5, this.y + 13.5);
+		let TEMPimg = createGraphics(blockText + 10, 900);
+		TEMPimg.fill(0, 0, 0);
+		TEMPimg.textAlign(LEFT);
+		TEMPimg.textSize(12);
+		TEMPimg.noStroke();
+		TEMPimg.text(this.name, this.x + 5, this.y + 13.5);
+		let totalHeight = 30;
 		for (let i = 0; i < this.args.length; i++) {
-			//If the argument is filled out, display that-otherwise, display what it should be
-			text(this.args[i] + ": " + this.code[i + 1], this.x + 5, this.y + 23.5 + (i + 1) * 20);
+			if(Array.isArray(this.code[i + 1])){
+				var TEMP = new Block(this.code[i + 1], this.x + 5, this.y + totalHeight + 20);
+				TEMPimg.text(this.args[i] + ": ", this.x + 5, this.y + totalHeight + 20);
+				totalHeight += TEMP.render() + 20;
+			}else{
+				totalHeight += 20;
+				//If the argument is filled out, display that-otherwise, display what it should be
+				TEMPimg.text(this.args[i] + ": " + this.code[i + 1], this.x + 5, this.y + totalHeight);
+			}
 		}
-		return 30 + this.args.length * 20;
+		image(TEMPimg,0,0);
+		return totalHeight;
 	}
 }
 
@@ -311,7 +316,7 @@ function codeViewTEMP() {
 	fill(55);
 	stroke(255);
 	strokeWeight(10);
-	rect(5, 5, SYSTEM.window.code.w - 10,SYSTEM.window.code.h - 10, 5);
+	rect(5, 5, SYSTEM.window.code.w - 10, SYSTEM.window.code.h - 10, 5);
 
 	if (mouseX > SYSTEM.window.code.x && mouseX < SYSTEM.window.code.x + SYSTEM.window.code.w && mouseY > SYSTEM.window.code.y && mouseY < SYSTEM.window.code.y + 15) {
 		if (mouseIsPressed) {
@@ -373,7 +378,7 @@ function mouseWheel(event) {
 }
 function setup() {
 	//Initialize sketch
-	createCanvas(max(windowWidth,400), max(400,windowHeight));
+	createCanvas(max(windowWidth, 400), max(400, windowHeight));
 	background(255, 0, 0);
 
 	//Initialize window sizes and graphics
@@ -381,18 +386,18 @@ function setup() {
 	SYSTEM.window.debug.y = 0;
 	SYSTEM.window.debug.w = windowWidth / 4;
 	SYSTEM.window.debug.h = (windowHeight / 5) * 2;
-	
+
 	SYSTEM.window.code.x = 0;
 	SYSTEM.window.code.y = (windowHeight / 5) * 2;
 	SYSTEM.window.code.w = windowWidth;
-	SYSTEM.window.code.h = (windowHeight / 5 ) * 3;
+	SYSTEM.window.code.h = (windowHeight / 5) * 3;
 
-	SYSTEM.window.viewport.x = windowWidth/4;
+	SYSTEM.window.viewport.x = windowWidth / 4;
 	SYSTEM.window.viewport.y = 0;
 	SYSTEM.window.viewport.w = (windowWidth / 4) * 3;
 	SYSTEM.window.viewport.h = (windowHeight / 5) * 2;
-	SYSTEM.window.viewport.g = createGraphics(SYSTEM.window.viewport.w - 20, SYSTEM.window.viewport.h  - 25, WEBGL);
-	
+	SYSTEM.window.viewport.g = createGraphics(SYSTEM.window.viewport.w - 20, SYSTEM.window.viewport.h - 25, WEBGL);
+
 	//Initialize textbox
 	SYSTEM.window.code.input = createDiv('<style>.example { width: ' + (SYSTEM.window.code.w / 2 - 20) + 'px; height:' + (SYSTEM.window.code.h - 150) + 'px}</style> <textarea id="codeWindow" class="example" rows="5000" cols="500000" placeholder="Code" spellcheck="false"></textarea>');
 	SYSTEM.window.code.input.style('font-size', '16px');
@@ -405,7 +410,27 @@ function draw() {
 	try {
 		//Console
 		debugView();
-
+		function Window(args, func) {
+			push();
+			translate(args.x, args.y);
+			fill(55);
+			stroke(255);
+			strokeWeight(10);
+			rect(5, 5, args.w - 10, args.h - 10, 5);
+			if (mouseX > args.x && mouseX < args.x + args.w && mouseY > args.y && mouseY < args.y + 15) {
+				if (mouseIsPressed) {
+					args.x = mouseX - 150;
+					args.y = mouseY - 7.5;
+				}
+				fill(110);
+			} else {
+				fill(90);
+			}
+			noStroke();
+			rect(0, 0, args.w, 15, 1);
+			func();
+			pop();
+		}
 		//Codebox
 		push();
 		translate(SYSTEM.window.code.x, SYSTEM.window.code.y);
@@ -466,7 +491,7 @@ function draw() {
 			case "Code":
 
 				//Translation from instructions to more readable code, leading to nicer readability and syntax.
-				switch(SYSTEM.window.code.codeType){
+				switch (SYSTEM.window.code.codeType) {
 					case true:
 						SYSTEM.window.code.input.position(SYSTEM.window.code.x + (SYSTEM.window.code.w / 2), SYSTEM.window.code.y + 50.5);
 						SYSTEM.window.code.unsavedInitialCode = document.getElementById('codeWindow').value;
@@ -490,7 +515,7 @@ function draw() {
 								}
 							});
 						} catch (err) {
-							
+
 						}
 						break;
 					case false:
@@ -516,7 +541,7 @@ function draw() {
 								}
 							});
 						} catch (err) {
-							
+
 						}
 						break;
 				}
@@ -563,7 +588,7 @@ function draw() {
 							Line 4: Attempt to parse code into array form and update the entity's instructions
 							Line 5: Update the entity's raw code
 						**/
-						
+
 						var TEMP = SYSTEM.window.code.unsavedInitialCode.split('\n').filter((a) => a).join('~');
 						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
 						TEMP = '[' + TEMP + ']';
@@ -575,7 +600,7 @@ function draw() {
 						TEMP = '[' + TEMP + ']';
 						MAIN.entities[SYSTEM.window.code.selectedEntity].updateCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
 						MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode = TEMP;
-						
+
 					} catch (err) {
 						//Spam the error (cry about it)
 						syntaxError("COULD NOT COMPILE! " + err)
@@ -602,7 +627,7 @@ function draw() {
 							TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
 							SYSTEM.window.code.unsavedInitialCode = TEMP.replace(/~/g, '\n')//Split per line
 							document.getElementById('codeWindow').innerHTML = SYSTEM.window.code.unsavedInitialCode;
-							
+
 							var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode;
 							TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
 							TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
@@ -623,64 +648,54 @@ function draw() {
 				break;
 		}
 		pop();
-		
+
 		//Viewport
-		push();
-		translate(SYSTEM.window.viewport.x, SYSTEM.window.viewport.y);
-		fill(55);
-		stroke(255);
-		strokeWeight(10);
-		rect(5, 5, SYSTEM.window.viewport.w - 10, SYSTEM.window.viewport.h - 10, 5);
-		if (mouseX > SYSTEM.window.viewport.x && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w && mouseY > SYSTEM.window.viewport.y && mouseY < SYSTEM.window.viewport.y + 15) {
-		if (mouseIsPressed) {
-			SYSTEM.window.viewport.x = mouseX - 150;
-			SYSTEM.window.viewport.y = mouseY - 7.5;
-		}
-		fill(110);
-	} else {
-		fill(90);
-	}
-	noStroke();
-	rect(0, 0, SYSTEM.window.viewport.w, 15, 1);
-	pop();
-	
-	/**
-   vp = Shorthand for viewport variables
-   g = Graphical canvas
-	 camera = Variable set for camera
-	 x/y/z = X, y, and z coordinates
-	 r = Rotation
-	**/
-	let vp = SYSTEM.window.viewport;
-	vp.g.clear();
-	vp.g.background(135,206,235);
+		Window({
+			x: SYSTEM.window.viewport.x,
+			y: SYSTEM.window.viewport.y,
+			w: SYSTEM.window.viewport.w,
+			h: SYSTEM.window.viewport.h
+		}, () => {
 
-	//Floor [TEMP]
-	vp.g.push();
-	vp.g.translate(0,50,0)
-	vp.g.fill(0);
-	vp.g.box(500,5,500);
-	vp.g.pop();
-	
-	//Update and render all entities
-	if (SYSTEM.window.code.playing) {
+		})
+
+		/**
+		 vp = Shorthand for viewport variables
+		 g = Graphical canvas
+		 camera = Variable set for camera
+		 x/y/z = X, y, and z coordinates
+		 r = Rotation
+		**/
+		let vp = SYSTEM.window.viewport;
+		vp.g.clear();
+		vp.g.background(135, 206, 235);
+
+		//Floor [TEMP]
+		vp.g.push();
+		vp.g.translate(0, 50, 0)
+		vp.g.fill(0);
+		vp.g.box(500, 5, 500);
+		vp.g.pop();
+
+		//Update and render all entities
+		if (SYSTEM.window.code.playing) {
+			for (let entity in MAIN.entities) {
+				MAIN.entities[entity].update();
+			}
+		}
 		for (let entity in MAIN.entities) {
-			MAIN.entities[entity].update();
+			MAIN.entities[entity].render(SYSTEM.window.viewport.g);
 		}
-	}
-	for(let entity in MAIN.entities){
-		MAIN.entities[entity].render(SYSTEM.window.viewport.g);
-	}
-	//Update and set viewport camera
-	if(mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10){
-		vp.camera.x_r += movedX / 50;
-		vp.camera.y_r += movedY / 50;
-	}	
-	vp.g.camera(vp.camera.x,vp.camera.y,vp.camera.z,vp.camera.x + cos(vp.camera.x_r),vp.camera.y + vp.camera.y_r,vp.camera.z + sin(vp.camera.x_r));
+		//Update and set viewport camera
+		if (mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10) {
+			vp.camera.x_r += movedX / 50;
+			vp.camera.y_r += movedY / 50;
+		}
+		vp.g.camera(vp.camera.x, vp.camera.y, vp.camera.z, vp.camera.x + cos(vp.camera.x_r), vp.camera.y + vp.camera.y_r, vp.camera.z + sin(vp.camera.x_r));
 
-	//Render viewport
-	image(SYSTEM.window.viewport.g,SYSTEM.window.viewport.x + 10,SYSTEM.window.viewport.y + 15);
-		
+		//Render viewport
+		image(SYSTEM.window.viewport.g, SYSTEM.window.viewport.x + 10, SYSTEM.window.viewport.y + 15);
+
 		//Update all entities
 	} catch (err) {
 		background(120);
