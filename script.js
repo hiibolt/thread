@@ -33,14 +33,14 @@ var SYSTEM = {
 			y: undefined,
 			w: undefined,
 			h: undefined,
-			tabs: ["Entities", "Code", "Item", "Test"],
-			selectedTab: "Entities",
-			selectedEntity: undefined,
-			playing: false,
-			codeType: true, //true = initial code, false = update code
-			unsavedInitialCode: undefined,
-			unsavedUpdateCode: undefined,
-			input: undefined,
+			tabs: ["Entities", "Code", "Item", "Test"], //Tab list
+			selectedTab: "Entities", //Which tab is selected
+			selectedEntity: undefined, //Which entity is selected
+			playing: false, //Is the code executing
+			codeType: true, //true = editing initial code, false = editing update code
+			unsavedInitialCode: undefined, //String containing the UNSAVED initial code
+			unsavedUpdateCode: undefined, //String containing the UNSAVED update code
+			input: undefined, //Placeholder which has the <textarea> dom object stored in it
 		},
 		viewport: {
 			x: undefined,
@@ -53,8 +53,8 @@ var SYSTEM = {
 				x: 100,
 				y: 10,
 				z: 0,
-				x_r: 0,
-				y_r: 0,
+				x_r: 0, //2d rotation
+				y_r: 0, //look up/down rotation
 			}
 		}
 	},
@@ -128,7 +128,7 @@ class Entity {
 
 		//Check for nested functions, evaluate any matches
 		for (let i = 0; i < CODE_INFO.length; i++) {
-			if (Array.isArray(CODE_INFO[i])) {
+			if (Array.isArray(CODE_INFO[i]) && CODE_INFO[0] !== "if") {
 				CODE_INFO[i] = this.EVALUATE_CODE(CODE_INFO[i]);
 			}
 		}
@@ -147,7 +147,15 @@ class Entity {
 			case "sub": return CODE_INFO[1] * 1 - CODE_INFO[2] * 1;
 			case "mult": return this.multiplyAll(CODE_INFO.slice(1));
 			case "div": return (CODE_INFO[1] * 1) / (CODE_INFO[2] * 1);
+			
+			case "equals" : return CODE_INFO[1] == CODE_INFO[2];
+			case "notequals" : return !(CODE_INFO[1] == CODE_INFO[2]);
+			case "and" : return this.and(CODE_INFO.slice(1));
+			case "or" : return this.or(CODE_INFO.slice(1));
 
+			/** Logic **/
+			case "if" : return this.ifStatement(CODE_INFO[1],CODE_INFO[2],CODE_INFO[3]);
+			
 			/** Debug **/
 			case "print": return printMsg(CODE_INFO.slice(1).join(''));
 			default: nonFatalError("Function " + CODE_INFO[0] + " does not exist.");
@@ -168,11 +176,11 @@ class Entity {
 	}
 	//Returns variable <name>
 	getInternalVariable(name) {
-		if (this.internalVariables[name]) {
+		try{
 			return this.internalVariables[name];
-		} else {
+		} catch {
 			nonFatalError("Variable " + name + " does not exist or could not be fetched");
-			return 1;
+			return undefined;
 		}
 	}
 	//Sets position to (<setX>,<setY>,<setZ>)
@@ -212,106 +220,29 @@ class Entity {
 		numbers.forEach((i) => { ret *= i * 1 });
 		return ret;
 	}
-}
-//Block representation of code. Allows the user to better read their code.
-function Block(code, x, y) {
-	let name;
-	let args;
-	let colorF;
-	//Given the code, determine what the user's displayed name and arguments are
-	switch (code[0]) {
-		case "setPos":
-			name = "Set Self Position";
-			args = ["X", "Y", "Z"];
-			colorF = color('BlueViolet');
-			break;
-		case "setRot":
-			name = "Set Self Rotation";
-			args = ["X", "Y", "Z"];
-			colorF = color('BlueViolet');
-			break;
-		case "setIntVar":
-			name = "Set Internal Variable";
-			args = ["Variable Name", "Value"];
-			colorF = color('Beige');
-			break;
-		case "getIntVar":
-			name = "Get Internal Variable";
-			args = ["Variable Name"];
-			colorF = color('Beige');
-			break;
-		case "print":
-			name = "Print Message";
-			args = ["Message"];
-			colorF = color('DeepSkyBlue');
-			break;
-		case "concat":
-			name = "Concatenate Strings"
-			//See explanation at the top
-			args = Array.from(Array(code.length), (i, ind) => "String " + (ind + 1))
-			colorF = color('LimeGreen');
-			break;
-		case "mult":
-			name = "Multiply N1 * N2 * N..."
-			//See explanation at the top
-			args = Array.from(Array(code.length), (i, ind) => "#" + (ind + 1))
-			colorF = color('LimeGreen');
-			break;
-		default:
-			name = code[0] + "\nINVALID FUNCTION!";
-			args = [];
-			colorF = color('Red');
+	
+	//Returns true if all args return true
+	and(args){
+		return args.every((i) => i);
 	}
-	//Calculate the longest piece of text and stretch/squash block to fit
-	let blockText = textWidth(name) + 25;
-	for (let i = 0; i < args.length; i++) {
-		if (Array.isArray(code[i + 1])) {
-			let testWidth = textWidth(args[i] + ": " + JSON.stringify(code[i + 1]));
-			if (testWidth + 25 > blockText) {
-				blockText = testWidth + 25;
+	//Return true if any args return true
+	or(args){
+		return args.find((i) => i) != undefined;
+	}
+	
+	//Conditional
+	ifStatement(condition,option1,option2){
+		try{
+			if(this.EVALUATE_CODE(condition)){
+				return this.EVALUATE_CODE(option1);
+			}else{
+				return this.EVALUATE_CODE(option2);
 			}
-		} else {
-			if (textWidth(args[i] + ": " + code[i + 1]) > blockText) {
-				blockText = textWidth(args[i] + ": " + code[i + 1]) + 25;
-			}
+		}catch(err){
+			nonFatalError("Could not complete if statement!\n" + err);
+			return 1;
 		}
 	}
-	fill(colorF);
-	stroke(lerpColor(colorF, color(0), 0.4));
-	strokeWeight(3);
-	rect(x, y, blockText, 17)
-
-	textAlign(LEFT);
-	textSize(12);
-	fill(0, 0, 0);
-	noStroke();
-	text(name, x + 5, y + 13.5);
-
-	let totalHeight = 0;
-	for (let i = 0; i < args.length; i++) {
-		//If it's another code block, recursive that b!tch, otherwise, show the arg with the proper background fill
-		if (Array.isArray(code[i + 1])) {
-			fill(0, 0, 0);
-			noStroke();
-			text(args[i] + ": ", x + 5, y + totalHeight + 30);
-			totalHeight += Block(code[i + 1], x + textWidth(args[i] + ": ") + 5, y + totalHeight + 20) + 15;
-		} else {
-			fill(colorF);
-			noStroke();
-			rect(x, y + totalHeight + 15, blockText, 50);
-			fill(0, 0, 0);
-			text(args[i] + ": " + code[i + 1], x + 5, y + totalHeight + 30);
-			totalHeight += 30;
-		}
-	}
-	//The block's edge lines, helps a little bit with readability
-	if (args.length > 0) {
-		stroke(lerpColor(colorF, color(0), 0.4));
-		line(x, y, x, y + totalHeight + 30);
-		//line(x + blockText,y,x + blockText,y + totalHeight + 30);
-	}
-	return totalHeight + 20;
-
 }
 
 /** Graphical Functions **/
@@ -355,6 +286,156 @@ function Window(args, func) {
 	func();
 	pop();
 }
+function Block(code, x, y) {
+	let name;
+	let args;
+	let colorF;
+	//Given the code, determine what the user's displayed name and arguments are
+	switch (code[0]) {
+		case "setPos":
+			name = "Set Self Position";
+			args = ["X", "Y", "Z"];
+			colorF = color('Magenta');
+			break;
+		case "setRot":
+			name = "Set Self Rotation";
+			args = ["X", "Y", "Z"];
+			colorF = color('Magenta');
+			break;
+		case "setIntVar":
+			name = "Set Internal Variable";
+			args = ["Variable Name", "Value"];
+			colorF = color('Beige');
+			break;
+		case "getIntVar":
+			name = "Get Internal Variable";
+			args = ["Variable Name"];
+			colorF = color('Beige');
+			break;
+			
+		case "print":
+			name = "Print Message";
+			args = ["Message"];
+			colorF = color('DeepSkyBlue');
+			break;
+			
+		case "concat":
+			name = "Concatenate Strings"
+			//See explanation at the top
+			args = Array.from(Array(code.length), (i, ind) => "String " + (ind + 1) + (ind + 1 == code.length ? "*" : ""))
+			colorF = color('LimeGreen');
+			break;
+		case "mult":
+			name = "Multiply N1 * N2 * N..."
+			//See explanation at the top
+			args = Array.from(Array(code.length), (i, ind) => "#" + (ind + 1) + (ind + 1 == code.length ? "*" : ""))
+			colorF = color('LimeGreen');
+			break;
+		case "div":
+			name = "Divide N1 * N2"
+			args = ["#1","N2"];
+			colorF = color('LimeGreen');
+			break;
+		case "add":
+			name = "Add N1 + N2 + N..."
+			//See explanation at the top
+			args = Array.from(Array(code.length), (i, ind) => "#" + (ind + 1) + (ind + 1 == code.length ? "*" : ""))
+			colorF = color('LimeGreen');
+			break;
+		case "sub":
+			name = "Subtract N1 - N2"
+			args = ["#1","N2"];
+			colorF = color('LimeGreen');
+			break;
+			
+		case "equals":
+			name = "Assert Item 1 equals Item 2"
+			args = ["Item 1","Item 2"];
+			colorF = color('PaleTurquoise');
+			break;
+		case "notequals":
+			name = "Assert Item 1 does not equal Item 2"
+			args = ["Item 1","Item 2"];
+			colorF = color('PaleTurquoise');
+			break;
+		case "and":
+			name = "Asesrt A1 and A2 and A..."
+			//See explanation at the top
+			args = Array.from(Array(code.length), (i, ind) => "Argument " + (ind + 1) + (ind + 1 == code.length ? "*" : ""))
+			colorF = color('PaleTurquoise');
+			break;
+		case "or":
+			name = "Asesrt any A1 or A2 or A..."
+			//See explanation at the top
+			args = Array.from(Array(code.length), (i, ind) => "Argument " + (ind + 1) + (ind + 1 == code.length ? "*" : ""))
+			colorF = color('PaleTurquoise');
+			break;
+
+		case "if":
+			name = "If Condition then Option 1 otherwise Option 2"
+			args = ["Condition","Option 1","Option 2"]
+			colorF = color('Khaki');
+			break;
+		default:
+			name = code[0] + "\nINVALID FUNCTION!";
+			args = [];
+			colorF = color('Red');
+	}
+	//Calculate the longest piece of text and stretch/squash block to fit
+	let blockText = textWidth(name) + 25;
+	for (let i = 0; i < args.length; i++) {
+		if (Array.isArray(code[i + 1])) {
+			let testWidth = textWidth(args[i] + ": " + JSON.stringify(code[i + 1]));
+			if (testWidth + 25 > blockText) {
+				blockText = testWidth + 25;
+			}
+		} else {
+			if (textWidth(args[i] + ": " + code[i + 1]) > blockText) {
+				blockText = textWidth(args[i] + ": " + code[i + 1]) + 25;
+			}
+		}
+	}
+	fill(colorF);
+	stroke(lerpColor(colorF, color(0), 0.4));
+	strokeWeight(3);
+	rect(x, y, blockText, 17)
+
+	textAlign(LEFT);
+	textSize(12);
+	fill(0, 0, 0);
+	noStroke();
+	text(name, x + 5, y + 13.5);
+
+	let totalHeight = 0;
+	for (let i = 0; i < args.length; i++) {
+		//If it's another code block, recursive that b!tch, otherwise, show the arg with the proper background fill
+		if (Array.isArray(code[i + 1])) {
+			noStroke();
+			fill(255,255,255);
+			text(args[i] + ": ", x + 4, y + totalHeight + 30);
+			fill(0, 0, 0);
+			text(args[i] + ": ", x + 5, y + totalHeight + 30);
+			totalHeight += Block(code[i + 1], x + textWidth(args[i] + ": ") + 5, y + totalHeight + 20) + 15;
+		} else {
+			fill(colorF);
+			noStroke();
+			rect(x, y + totalHeight + 15, blockText, 50);
+			fill(0, 0, 0);
+			text(args[i] + ": " + code[i + 1], x + 5, y + totalHeight + 30);
+			totalHeight += 30;
+		}
+	}
+	//The block's edge lines, helps a little bit with readability
+	if (args.length > 0) {
+		stroke(lerpColor(colorF, color(0), 0.4));
+		line(x, y, x, y + totalHeight + 30);
+		//line(x + blockText,y,x + blockText,y + totalHeight + 30);
+	}
+	return totalHeight + 20;
+
+}
+
+/** Code chunking for readability in draw loop **/
 function debugView() {
 	push();
 	translate(SYSTEM.window.debug.x, SYSTEM.window.debug.y);
@@ -379,7 +460,7 @@ function debugView() {
 
 	fill(255);
 	noStroke();
-	text(SYSTEM.window.debug.msgs.slice(-5).join('\n'), 15, 20, SYSTEM.window.debug.w - 30);
+	text(SYSTEM.window.debug.msgs.slice(-9).join('\n'), 15, 20, SYSTEM.window.debug.w - 30);
 	pop();
 }
 function codeTabView() {
