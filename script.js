@@ -6,6 +6,17 @@ p5.disableFriendlyErrors = true;
 	- nameOfItem = Function, argument, or variable
 	- _~~~~~~~~~ = Hint to internal variable for user or dev
 **/
+/**
+	Awesome array hack to create an 'infinite argument' function representation.
+	- Array.from creates a clone of an array from an array-like/ish object
+		IE Array.from("hi") == ["h","i"]
+	- We can use the advanced form 
+		IE Array.from("hi",(i) => i.toUpperCase()) == ["H","I"]
+	- Combine both to get Array.form(Array(# of arguments provided + 1), (item,index) => ("Num " + (index + 1)))
+		Which then outputs from 1,7,28 as inputs: Num 1: 1, Num 2: 7, Num 3: 28, Num 4: undefined
+
+	This in turn lets the user see all arguments they've given, as well as alerts to the possibility of more.	
+**/
 
 // Host Variables
 var SYSTEM = {
@@ -203,74 +214,104 @@ class Entity {
 	}
 }
 //Block representation of code. Allows the user to better read their code.
-class Block {
-	constructor(code, x, y) {
-		this.x = x;
-		this.y = y;
-		this.code = code;
+function Block(code, x, y) {
+	let name;
+	let args;
+	let colorF;
+	//Given the code, determine what the user's displayed name and arguments are
+	switch (code[0]) {
+		case "setPos":
+			name = "Set Self Position";
+			args = ["X", "Y", "Z"];
+			colorF = color('BlueViolet');
+			break;
+		case "setRot":
+			name = "Set Self Rotation";
+			args = ["X", "Y", "Z"];
+			colorF = color('BlueViolet');
+			break;
+		case "setIntVar":
+			name = "Set Internal Variable";
+			args = ["Variable Name", "Value"];
+			colorF = color('Beige');
+			break;
+		case "getIntVar":
+			name = "Get Internal Variable";
+			args = ["Variable Name"];
+			colorF = color('Beige');
+			break;
+		case "print":
+			name = "Print Message";
+			args = ["Message"];
+			colorF = color('DeepSkyBlue');
+			break;
+		case "concat":
+			name = "Concatenate Strings"
+			//See explanation at the top
+			args = Array.from(Array(code.length), (i, ind) => "String " + (ind + 1))
+			colorF = color('LimeGreen');
+			break;
+		case "mult":
+			name = "Multiply N1 * N2 * N..."
+			//See explanation at the top
+			args = Array.from(Array(code.length), (i, ind) => "#" + (ind + 1))
+			colorF = color('LimeGreen');
+			break;
+		default:
+			name = code[0] + "\nINVALID FUNCTION!";
+			args = [];
+			colorF = color('Red');
+	}
+	//Calculate the longest piece of text and stretch/squash block to fit
+	let blockText = textWidth(name) + 25;
+	for (let i = 0; i < args.length; i++) {
+		if (Array.isArray(code[i + 1])) {
+			let testWidth = textWidth(args[i] + ": " + JSON.stringify(code[i + 1]));
+			if (testWidth + 25 > blockText) {
+				blockText = testWidth + 25;
+			}
+		} else {
+			if (textWidth(args[i] + ": " + code[i + 1]) > blockText) {
+				blockText = textWidth(args[i] + ": " + code[i + 1]) + 25;
+			}
+		}
+	}
+	fill(colorF);
+	stroke(lerpColor(colorF, color(0), 0.4));
+	strokeWeight(3);
+	rect(x, y, blockText, 17)
 
-		//Given the code, determine what the user's displayed name and arguments are
-		switch (this.code[0]) {
-			case "setPos":
-				this.name = "Set Self Position";
-				this.args = ["X", "Y", "Z"];
-				this.color = color('BlueViolet');
-				break;
-			case "setRot":
-				this.name = "Set Self Rotation";
-				this.args = ["X", "Y", "Z"];
-				this.color = color('BlueViolet');
-				break;
-			case "setIntVar":
-				this.name = "Set Internal Variable";
-				this.args = ["Variable Name", "Value"];
-				this.color = color('Beige');
-				break;
-			case "getIntVar":
-				this.name = "Get Internal Variable";
-				this.args = ["Variable Name"];
-				this.color = color('Beige');
-				break;
-			case "print":
-				this.name = "Print Message";
-				this.args = ["Message"];
-				this.color = color('DeepSkyBlue');
-				break;
-			default:
-				this.name = this.code[0] + "\nINVALID FUNCTION!";
-				this.args = [];
-				this.color = color('Red');
+	textAlign(LEFT);
+	textSize(12);
+	fill(0, 0, 0);
+	noStroke();
+	text(name, x + 5, y + 13.5);
+
+	let totalHeight = 0;
+	for (let i = 0; i < args.length; i++) {
+		//If it's another code block, recursive that b!tch, otherwise, show the arg with the proper background fill
+		if (Array.isArray(code[i + 1])) {
+			fill(0, 0, 0);
+			noStroke();
+			text(args[i] + ": ", x + 5, y + totalHeight + 30);
+			totalHeight += Block(code[i + 1], x + textWidth(args[i] + ": ") + 5, y + totalHeight + 20) + 15;
+		} else {
+			fill(colorF);
+			noStroke();
+			rect(x, y + totalHeight + 15, blockText, 50);
+			fill(0, 0, 0);
+			text(args[i] + ": " + code[i + 1], x + 5, y + totalHeight + 30);
+			totalHeight += 30;
 		}
 	}
-	render() {
-		//Calculate the longest piece of text and stretch/squash block to fit
-		let blockText = textWidth(this.name);
-		for (let i = 0; i < this.args.length; i++) {
-			if (textWidth(this.args[i] + ": " + this.code[i + 1]) > blockText) {
-				blockText = textWidth(this.args[i] + ": " + this.code[i + 1]);
-			}
-		}
-		let TEMPimg = createGraphics(blockText + 10, 900);
-		TEMPimg.fill(0, 0, 0);
-		TEMPimg.textAlign(LEFT);
-		TEMPimg.textSize(12);
-		TEMPimg.noStroke();
-		TEMPimg.text(this.name, this.x + 5, this.y + 13.5);
-		let totalHeight = 30;
-		for (let i = 0; i < this.args.length; i++) {
-			if(Array.isArray(this.code[i + 1])){
-				var TEMP = new Block(this.code[i + 1], this.x + 5, this.y + totalHeight + 20);
-				TEMPimg.text(this.args[i] + ": ", this.x + 5, this.y + totalHeight + 20);
-				totalHeight += TEMP.render() + 20;
-			}else{
-				totalHeight += 20;
-				//If the argument is filled out, display that-otherwise, display what it should be
-				TEMPimg.text(this.args[i] + ": " + this.code[i + 1], this.x + 5, this.y + totalHeight);
-			}
-		}
-		image(TEMPimg,0,0);
-		return totalHeight;
+	//The block's edge lines, helps a little bit with readability
+	if (args.length > 0) {
+		stroke(lerpColor(colorF, color(0), 0.4));
+		line(x, y, x, y + totalHeight + 30);
+		//line(x + blockText,y,x + blockText,y + totalHeight + 30);
 	}
+	return totalHeight + 20;
+
 }
 
 /** Graphical Functions **/
@@ -283,7 +324,36 @@ function Button(args, func) {
 	} else {
 		fill(args.primaryColor);
 	}
+	stroke(lerpColor(args.primaryColor, color(255), 0.4));
+	strokeWeight(3);
 	rect(args.x, args.y, args.w, args.h, 3);
+
+	fill(255);
+	noStroke();
+	textAlign(CENTER);
+	textSize(12);
+	text(args.text, args.x + (args.w / 2), args.y + (args.h / 2) + 4);
+}
+function Window(args, func) {
+	push();
+	translate(args.x, args.y);
+	fill(55);
+	stroke(255);
+	strokeWeight(10);
+	rect(5, 5, args.w - 10, args.h - 10, 5);
+	if (mouseX > args.x && mouseX < args.x + args.w && mouseY > args.y && mouseY < args.y + 15) {
+		if (mouseIsPressed) {
+			args.mod.x = mouseX - 150;
+			args.mod.y = mouseY - 7.5;
+		}
+		fill(110);
+	} else {
+		fill(90);
+	}
+	noStroke();
+	rect(0, 0, args.w, 15, 1);
+	func();
+	pop();
 }
 function debugView() {
 	push();
@@ -312,152 +382,71 @@ function debugView() {
 	text(SYSTEM.window.debug.msgs.slice(-5).join('\n'), 15, 20, SYSTEM.window.debug.w - 30);
 	pop();
 }
-function codeViewTEMP() {
-	fill(55);
-	stroke(255);
-	strokeWeight(10);
-	rect(5, 5, SYSTEM.window.code.w - 10, SYSTEM.window.code.h - 10, 5);
-
-	if (mouseX > SYSTEM.window.code.x && mouseX < SYSTEM.window.code.x + SYSTEM.window.code.w && mouseY > SYSTEM.window.code.y && mouseY < SYSTEM.window.code.y + 15) {
-		if (mouseIsPressed) {
-			SYSTEM.window.code.x = mouseX - 150;
-			SYSTEM.window.code.y = mouseY - 7.5;
-		}
+function codeTabView() {
+	Window({
+		x: SYSTEM.window.code.x,
+		y: SYSTEM.window.code.y,
+		w: SYSTEM.window.code.w,
+		h: SYSTEM.window.code.h,
+		mod: SYSTEM.window.code
+	}, () => {
+		//Display all tabs
+		SYSTEM.window.code.tabs.forEach((item, ind) => {
+			if (!SYSTEM.window.code.selectedEntity && (item == "Item" || item == "Code")) {
+				return;
+			}else{
+				Button({
+					x: 15 + ind * 50,
+					y: 19,
+					offsetX: SYSTEM.window.code.x,
+					offsetY: SYSTEM.window.code.y,
+					text: item,
+					w: 50,
+					h: 20,
+					primaryColor: color(120),
+				},()=>{
+					SYSTEM.window.code.selectedTab = item;
+					document.getElementById('codeWindow').style.display = "none";
+				})
+			}
+		});
+		//'Aesthetic' rectangle below code
 		fill(110);
-	} else {
-		fill(90);
-	}
-	noStroke();
-	rect(0, 0, SYSTEM.window.code.w, 15, 1);
-
-	//Display all tabs
-	SYSTEM.window.code.tabs.forEach((item, ind) => {
-		if ((item == "Item" && !SYSTEM.window.code.selectedEntity) || (item == "Code" && !SYSTEM.window.code.selectedEntity)) {
-			return;
-		}
-		if (mouseX > SYSTEM.window.code.x + 15 + ind * 50 && mouseX < SYSTEM.window.code.x + 50 + 15 + ind * 50 && mouseY > SYSTEM.window.code.y + 19 && mouseY < SYSTEM.window.code.y + 39) {
-			if (mouseIsPressed) {
-				SYSTEM.window.code.selectedTab = item;
-				document.getElementById('codeWindow').style.display = "none";
-			}
-			fill(110);
-		} else {
-			fill(90);
-		}
-		strokeWeight(3);
-		stroke(255);
-		rect(15 + ind * 50, 19, 50, 20, 5);
-
-		fill(255);
-		noStroke();
-		textAlign(CENTER);
-		text(item, 40 + ind * 50, 32.5);
-	});
-	fill(90);
-	rect(5, 36, SYSTEM.window.code.w - 10, SYSTEM.window.code.h - 41, 5)
-}
-
-/** Debug Functions **/
-function printMsg(msg) {
-	SYSTEM.window.debug.msgs.push("Message: " + msg);
-}
-function nonFatalError(msg) {
-	SYSTEM.window.debug.msgs.push("Warning: " + msg);
-}
-function syntaxError(msg) {
-	SYSTEM.window.debug.msgs.push("Syntax error: " + msg);
-}
-
-//String splice function. Identical to Array.splice
-String.prototype.splice = function(ind, str, rem) {
-	return this.slice(0, ind) + str + this.slice(ind + rem);
-};
-function keyPressed() {
-}
-function mouseWheel(event) {
-}
-function setup() {
-	//Initialize sketch
-	createCanvas(max(windowWidth, 400), max(400, windowHeight));
-	background(255, 0, 0);
-
-	//Initialize window sizes and graphics
-	SYSTEM.window.debug.x = 0;
-	SYSTEM.window.debug.y = 0;
-	SYSTEM.window.debug.w = windowWidth / 4;
-	SYSTEM.window.debug.h = (windowHeight / 5) * 2;
-
-	SYSTEM.window.code.x = 0;
-	SYSTEM.window.code.y = (windowHeight / 5) * 2;
-	SYSTEM.window.code.w = windowWidth;
-	SYSTEM.window.code.h = (windowHeight / 5) * 3;
-
-	SYSTEM.window.viewport.x = windowWidth / 4;
-	SYSTEM.window.viewport.y = 0;
-	SYSTEM.window.viewport.w = (windowWidth / 4) * 3;
-	SYSTEM.window.viewport.h = (windowHeight / 5) * 2;
-	SYSTEM.window.viewport.g = createGraphics(SYSTEM.window.viewport.w - 20, SYSTEM.window.viewport.h - 25, WEBGL);
-
-	//Initialize textbox
-	SYSTEM.window.code.input = createDiv('<style>.example { width: ' + (SYSTEM.window.code.w / 2 - 20) + 'px; height:' + (SYSTEM.window.code.h - 150) + 'px}</style> <textarea id="codeWindow" class="example" rows="5000" cols="500000" placeholder="Code" spellcheck="false"></textarea>');
-	SYSTEM.window.code.input.style('font-size', '16px');
-
-	//TEMP: add entity
-	MAIN.entities["MainEntity"] = new Entity({ x: 90, y: 0, z: 50, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]],["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', '[["setPos",0,0,0]]');
-}
-function draw() {
-	background(70);
-	try {
-		//Console
-		debugView();
-		function Window(args, func) {
-			push();
-			translate(args.x, args.y);
-			fill(55);
-			stroke(255);
-			strokeWeight(10);
-			rect(5, 5, args.w - 10, args.h - 10, 5);
-			if (mouseX > args.x && mouseX < args.x + args.w && mouseY > args.y && mouseY < args.y + 15) {
-				if (mouseIsPressed) {
-					args.x = mouseX - 150;
-					args.y = mouseY - 7.5;
-				}
-				fill(110);
-			} else {
-				fill(90);
-			}
-			noStroke();
-			rect(0, 0, args.w, 15, 1);
-			func();
-			pop();
-		}
-		//Codebox
-		push();
-		translate(SYSTEM.window.code.x, SYSTEM.window.code.y);
-		scale(1);
-		codeViewTEMP();
+		rect(5, 36, SYSTEM.window.code.w - 10, SYSTEM.window.code.h - 41, 5)
+		
 		switch (SYSTEM.window.code.selectedTab) {
 			case "Item":
 				let e = MAIN.entities[SYSTEM.window.code.selectedEntity];
+				
 				fill(255);
 				noStroke();
 				textAlign(LEFT);
 				textSize(15);
 				text(SYSTEM.window.code.selectedEntity, 20, 70);
+				
 				textSize(12);
 				text("Position: (x:" + e.x + " | y: " + e.y + " | z: " + e.z + ")", 20, 95);
 				text("Rotation: (x:" + e.rX + " | y: " + e.rY + " | z: " + e.rZ + ")", 20, 115);
+				
 				text("Internal Variables", 20, 155);
 				let offset = -1;
-				for (let i in e.internalVariables) {
+				for (let i  in e.internalVariables) {
 					offset++;
 					text("	" + i + ": " + e.internalVariables[i], 20, 170 + offset * 15);
 				}
 				break;
 			case "Test":
-				//Start button
 				if (!SYSTEM.window.code.playing) {
-					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 45 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
+					Button({
+						x: 20,
+						y: 50,
+						offsetX: SYSTEM.window.code.x,
+						offsetY: SYSTEM.window.code.y,
+						text: "Start",
+						w: 35,
+						h: 25,
+						primaryColor: color(0,120,0)
+					},()=>{
 						//Start update process for all entities
 						SYSTEM.window.code.playing = true;
 						//Clear console
@@ -466,30 +455,23 @@ function draw() {
 						for (let entity in MAIN.entities) {
 							MAIN.entities[entity].initialize();
 						}
-					}
-					fill(0, 200, 0);
-					stroke(0, 170, 0);
+					})
 				} else {
-					fill(200);
-					stroke(170);
-				}
-				triangle(20, 50, 45, 62.5, 20, 75);
-
-				//Stop button
-				if (SYSTEM.window.code.playing) {
-					if (mouseX > SYSTEM.window.code.x + 60 && mouseX < SYSTEM.window.code.x + 85 && mouseY > SYSTEM.window.code.y + 50 && mouseY < SYSTEM.window.code.y + 75 && mouseIsPressed) {
+					Button({
+						x: 60,
+						y: 50,
+						offsetX: SYSTEM.window.code.x,
+						offsetY: SYSTEM.window.code.y,
+						text: "Stop",
+						w: 35,
+						h: 25,
+						primaryColor: color(120,0,0)
+					},()=>{
 						SYSTEM.window.code.playing = false;
-					}
-					fill(200, 0, 0);
-					stroke(170, 0, 0);
-				} else {
-					fill(200);
-					stroke(170);
+					})
 				}
-				rect(60, 50, 25, 25, 2);
 				break;
 			case "Code":
-
 				//Translation from instructions to more readable code, leading to nicer readability and syntax.
 				switch (SYSTEM.window.code.codeType) {
 					case true:
@@ -508,8 +490,7 @@ function draw() {
 							//Represent all SAVED code as blocks.
 							codeList.forEach((i) => {
 								try {
-									let block = new Block(i, 20, 50.5 + blockOffset);
-									blockOffset += block.render();
+									blockOffset += Block(i, 20, 50.5 + blockOffset);
 								} catch {
 
 								}
@@ -534,8 +515,7 @@ function draw() {
 							//Represent all SAVED code as blocks.
 							codeList.forEach((i) => {
 								try {
-									let block = new Block(i, 20, 50.5 + blockOffset);
-									blockOffset += block.render();
+									blockOffset += Block(i, 20, 50.5 + blockOffset);
 								} catch {
 
 								}
@@ -547,35 +527,38 @@ function draw() {
 				}
 				//Swap between initial and update code
 				Button({
-					x: (SYSTEM.window.code.w / 2) - 75,
+					x: (SYSTEM.window.code.w / 2) - 185,
 					y: SYSTEM.window.code.h - 50,
 					offsetX: SYSTEM.window.code.x,
 					offsetY: SYSTEM.window.code.y,
-					w: 50,
-					h: 25,
-					primaryColor: color(120),
-				}, () => {
-					SYSTEM.window.code.codeType = false;
-					document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedUpdateCode;
-				});
-				Button({
-					x: (SYSTEM.window.code.w / 2) - 135,
-					y: SYSTEM.window.code.h - 50,
-					offsetX: SYSTEM.window.code.x,
-					offsetY: SYSTEM.window.code.y,
-					w: 50,
+					text: "On Initializaion",
+					w: 90,
 					h: 25,
 					primaryColor: color(120),
 				}, () => {
 					SYSTEM.window.code.codeType = true;
 					document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedInitialCode;
 				});
-				//Represent and save button.
 				Button({
-					x: (SYSTEM.window.code.w / 2) + 25,
+					x: (SYSTEM.window.code.w / 2) - 85,
 					y: SYSTEM.window.code.h - 50,
 					offsetX: SYSTEM.window.code.x,
 					offsetY: SYSTEM.window.code.y,
+					text: "On Update",
+					w: 70,
+					h: 25,
+					primaryColor: color(120),
+				}, () => {
+					SYSTEM.window.code.codeType = false;
+					document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedUpdateCode;
+				});
+				//Represent and save button.
+				Button({
+					x: (SYSTEM.window.code.w / 2) + 15,
+					y: SYSTEM.window.code.h - 50,
+					offsetX: SYSTEM.window.code.x,
+					offsetY: SYSTEM.window.code.y,
+					text: "Save",
 					w: 50,
 					h: 25,
 					primaryColor: color(120),
@@ -647,14 +630,69 @@ function draw() {
 				}
 				break;
 		}
-		pop();
+	})
+}
+
+/** Debug Functions **/
+function printMsg(msg) {
+	SYSTEM.window.debug.msgs.push("Message: " + msg);
+}
+function nonFatalError(msg) {
+	SYSTEM.window.debug.msgs.push("Warning: " + msg);
+}
+function syntaxError(msg) {
+	SYSTEM.window.debug.msgs.push("Syntax error: " + msg);
+}
+
+//String splice function. Identical to Array.splice
+String.prototype.splice = function(ind, str, rem) {
+	return this.slice(0, ind) + str + this.slice(ind + rem);
+};
+function setup() {
+	//Initialize sketch
+	createCanvas(max(windowWidth, 400), max(400, windowHeight));
+	background(255, 0, 0);
+
+	//Initialize window sizes and graphics
+	SYSTEM.window.debug.x = 0;
+	SYSTEM.window.debug.y = 0;
+	SYSTEM.window.debug.w = windowWidth / 4;
+	SYSTEM.window.debug.h = (windowHeight / 5) * 2;
+
+	SYSTEM.window.code.x = 0;
+	SYSTEM.window.code.y = (windowHeight / 5) * 2;
+	SYSTEM.window.code.w = windowWidth;
+	SYSTEM.window.code.h = (windowHeight / 5) * 3;
+
+	SYSTEM.window.viewport.x = windowWidth / 4;
+	SYSTEM.window.viewport.y = 0;
+	SYSTEM.window.viewport.w = (windowWidth / 4) * 3;
+	SYSTEM.window.viewport.h = (windowHeight / 5) * 2;
+	SYSTEM.window.viewport.g = createGraphics(SYSTEM.window.viewport.w - 20, SYSTEM.window.viewport.h - 25, WEBGL);
+
+	//Initialize textbox
+	SYSTEM.window.code.input = createDiv('<style>.example { width: ' + (SYSTEM.window.code.w / 2 - 20) + 'px; height:' + (SYSTEM.window.code.h - 150) + 'px}</style> <textarea id="codeWindow" class="example" rows="5000" cols="500000" placeholder="Code" spellcheck="false"></textarea>');
+	SYSTEM.window.code.input.style('font-size', '16px');
+
+	//TEMP: add entity
+	MAIN.entities["MainEntity"] = new Entity({ x: 90, y: 0, z: 50, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]]~["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', '[["setPos",0,0,0]]');
+}
+function draw() {
+	background(70);
+	try {
+		//Console
+		debugView();
+
+		//Codebox
+		codeTabView();
 
 		//Viewport
 		Window({
 			x: SYSTEM.window.viewport.x,
 			y: SYSTEM.window.viewport.y,
 			w: SYSTEM.window.viewport.w,
-			h: SYSTEM.window.viewport.h
+			h: SYSTEM.window.viewport.h,
+			mod: SYSTEM.window.viewport
 		}, () => {
 
 		})
