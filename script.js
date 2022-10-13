@@ -394,7 +394,7 @@ function codeTabView() {
 		SYSTEM.window.code.tabs.forEach((item, ind) => {
 			if (!SYSTEM.window.code.selectedEntity && (item == "Item" || item == "Code")) {
 				return;
-			}else{
+			} else {
 				Button({
 					x: 15 + ind * 50,
 					y: 19,
@@ -404,7 +404,7 @@ function codeTabView() {
 					w: 50,
 					h: 20,
 					primaryColor: color(120),
-				},()=>{
+				}, () => {
 					SYSTEM.window.code.selectedTab = item;
 					document.getElementById('codeWindow').style.display = "none";
 				})
@@ -413,24 +413,24 @@ function codeTabView() {
 		//'Aesthetic' rectangle below code
 		fill(110);
 		rect(5, 36, SYSTEM.window.code.w - 10, SYSTEM.window.code.h - 41, 5)
-		
+
 		switch (SYSTEM.window.code.selectedTab) {
 			case "Item":
 				let e = MAIN.entities[SYSTEM.window.code.selectedEntity];
-				
+
 				fill(255);
 				noStroke();
 				textAlign(LEFT);
 				textSize(15);
 				text(SYSTEM.window.code.selectedEntity, 20, 70);
-				
+
 				textSize(12);
 				text("Position: (x:" + e.x + " | y: " + e.y + " | z: " + e.z + ")", 20, 95);
 				text("Rotation: (x:" + e.rX + " | y: " + e.rY + " | z: " + e.rZ + ")", 20, 115);
-				
+
 				text("Internal Variables", 20, 155);
 				let offset = -1;
-				for (let i  in e.internalVariables) {
+				for (let i in e.internalVariables) {
 					offset++;
 					text("	" + i + ": " + e.internalVariables[i], 20, 170 + offset * 15);
 				}
@@ -445,8 +445,8 @@ function codeTabView() {
 						text: "Start",
 						w: 35,
 						h: 25,
-						primaryColor: color(0,120,0)
-					},()=>{
+						primaryColor: color(0, 120, 0)
+					}, () => {
 						//Start update process for all entities
 						SYSTEM.window.code.playing = true;
 						//Clear console
@@ -465,66 +465,47 @@ function codeTabView() {
 						text: "Stop",
 						w: 35,
 						h: 25,
-						primaryColor: color(120,0,0)
-					},()=>{
+						primaryColor: color(120, 0, 0)
+					}, () => {
 						SYSTEM.window.code.playing = false;
 					})
 				}
 				break;
 			case "Code":
-				//Translation from instructions to more readable code, leading to nicer readability and syntax.
-				switch (SYSTEM.window.code.codeType) {
-					case true:
-						SYSTEM.window.code.input.position(SYSTEM.window.code.x + (SYSTEM.window.code.w / 2), SYSTEM.window.code.y + 50.5);
-						SYSTEM.window.code.unsavedInitialCode = document.getElementById('codeWindow').value;
-						document.getElementById('codeWindow').style.display = "block";
+				SYSTEM.window.code.input.position(SYSTEM.window.code.x + (SYSTEM.window.code.w / 2), SYSTEM.window.code.y + 50.5);
+				document.getElementById('codeWindow').style.display = "block";
+				if (SYSTEM.window.code.codeType) {
+					SYSTEM.window.code.unsavedInitialCode = document.getElementById('codeWindow').value;
+				} else {
+					SYSTEM.window.code.unsavedUpdateCode = document.getElementById('codeWindow').value;
 
-						//Add on this height to offset the next block
-						var blockOffset = 0;
-						try {
-							let TEMP = SYSTEM.window.code.unsavedInitialCode.split('\n').filter((a) => a).join('~');
-							TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
-							TEMP = '[' + TEMP + ']';
-							let codeList = JSON.parse(TEMP.replace(/~/g, ','));
-
-							//Represent all SAVED code as blocks.
-							codeList.forEach((i) => {
-								try {
-									blockOffset += Block(i, 20, 50.5 + blockOffset);
-								} catch {
-
-								}
-							});
-						} catch (err) {
-
-						}
-						break;
-					case false:
-						SYSTEM.window.code.input.position(SYSTEM.window.code.x + (SYSTEM.window.code.w / 2), SYSTEM.window.code.y + 50.5);
-						SYSTEM.window.code.unsavedUpdateCode = document.getElementById('codeWindow').value;
-						document.getElementById('codeWindow').style.display = "block";
-
-						//Add on this height to offset the next block
-						var blockOffset = 0;
-						try {
-							let TEMP = SYSTEM.window.code.unsavedUpdateCode.split('\n').filter((a) => a).join('~');
-							TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
-							TEMP = '[' + TEMP + ']';
-							let codeList = JSON.parse(TEMP.replace(/~/g, ','));
-
-							//Represent all SAVED code as blocks.
-							codeList.forEach((i) => {
-								try {
-									blockOffset += Block(i, 20, 50.5 + blockOffset);
-								} catch {
-
-								}
-							});
-						} catch (err) {
-
-						}
-						break;
 				}
+
+				//Add on this height to offset the next block
+				var blockOffset = 0;
+				try {
+					var TEMP;
+					if (SYSTEM.window.code.codeType) {
+						TEMP = SYSTEM.window.code.unsavedInitialCode.split('\n').filter((a) => a).join('~');
+					} else {
+						TEMP = SYSTEM.window.code.unsavedUpdateCode.split('\n').filter((a) => a).join('~');
+					}
+					TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
+					TEMP = '[' + TEMP + ']';
+					let codeList = JSON.parse(TEMP.replace(/~/g, ','));
+
+					//Represent all SAVED code as blocks.
+					codeList.forEach((i) => {
+						blockOffset += Block(i, 20, 50.5 + blockOffset);
+					});
+				} catch (err) {
+					fill(255);
+					noStroke();
+					textSize(20);
+					textAlign(LEFT);
+					text("SYNTAX ERROR!\n" + err, 20, 55, SYSTEM.window.code.w / 2 - 20);
+				}
+
 				//Swap between initial and update code
 				Button({
 					x: (SYSTEM.window.code.w / 2) - 185,
@@ -552,6 +533,7 @@ function codeTabView() {
 					SYSTEM.window.code.codeType = false;
 					document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedUpdateCode;
 				});
+
 				//Represent and save button.
 				Button({
 					x: (SYSTEM.window.code.w / 2) + 15,
@@ -591,7 +573,6 @@ function codeTabView() {
 				});
 				break;
 			case "Entities":
-				let ind = -1;
 				fill(255);
 				noStroke();
 				textSize(18);
@@ -599,34 +580,33 @@ function codeTabView() {
 				text("Entity List:", 20, 63.5);
 
 				//Entity list
+				let ind = -1;
 				for (let key in MAIN.entities) {
 					ind++;
 					//Entity selection
-					if (mouseX > SYSTEM.window.code.x + 20 && mouseX < SYSTEM.window.code.x + 120 && mouseY > SYSTEM.window.code.y + 73.5 + ind * 50 && mouseY < SYSTEM.window.code.y + 40 + 73.5 + ind * 50) {
-						if (mouseIsPressed) {
-							SYSTEM.window.code.selectedEntity = key;
-							var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
-							TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
-							TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
-							SYSTEM.window.code.unsavedInitialCode = TEMP.replace(/~/g, '\n')//Split per line
-							document.getElementById('codeWindow').innerHTML = SYSTEM.window.code.unsavedInitialCode;
+					Button({
+						x: 20,
+						y: 73.5 + ind * 50,
+						offsetX: SYSTEM.window.code.x,
+						offsetY: SYSTEM.window.code.y,
+						text: key,
+						w: 100,
+						h: 40,
+						primaryColor: color(130)
+					}, () => {
+						SYSTEM.window.code.selectedEntity = key;
 
-							var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode;
-							TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
-							TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
-							SYSTEM.window.code.unsavedUpdateCode = TEMP.replace(/~/g, '\n')//Split per line
-						}
-						fill(140);
-					} else {
-						fill(120);
-					}
-					rect(20, 73.5 + ind * 50, 100, 40, 4);
+						var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
+						TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
+						TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
+						SYSTEM.window.code.unsavedInitialCode = TEMP.replace(/~/g, '\n')//Split per line
+						document.getElementById('codeWindow').innerHTML = SYSTEM.window.code.unsavedInitialCode;
 
-					fill(255);
-					noStroke();
-					textSize(12);
-					textAlign(CENTER);
-					text(key, 70, 97.5 + ind * 50);
+						var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode;
+						TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
+						TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
+						SYSTEM.window.code.unsavedUpdateCode = TEMP.replace(/~/g, '\n')//Split per line
+					});
 				}
 				break;
 		}
@@ -694,45 +674,43 @@ function draw() {
 			h: SYSTEM.window.viewport.h,
 			mod: SYSTEM.window.viewport
 		}, () => {
+			/**
+					 vp = Shorthand for viewport variables
+					 g = Graphical canvas
+					 camera = Variable set for camera
+					 x/y/z = X, y, and z coordinates
+					 r = Rotation
+					**/
+			let vp = SYSTEM.window.viewport;
+			vp.g.clear();
+			vp.g.background(135, 206, 235);
 
-		})
+			//Floor [TEMP]
+			vp.g.push();
+			vp.g.translate(0, 50, 0)
+			vp.g.fill(0);
+			vp.g.box(500, 5, 500);
+			vp.g.pop();
 
-		/**
-		 vp = Shorthand for viewport variables
-		 g = Graphical canvas
-		 camera = Variable set for camera
-		 x/y/z = X, y, and z coordinates
-		 r = Rotation
-		**/
-		let vp = SYSTEM.window.viewport;
-		vp.g.clear();
-		vp.g.background(135, 206, 235);
-
-		//Floor [TEMP]
-		vp.g.push();
-		vp.g.translate(0, 50, 0)
-		vp.g.fill(0);
-		vp.g.box(500, 5, 500);
-		vp.g.pop();
-
-		//Update and render all entities
-		if (SYSTEM.window.code.playing) {
-			for (let entity in MAIN.entities) {
-				MAIN.entities[entity].update();
+			//Update and render all entities
+			if (SYSTEM.window.code.playing) {
+				for (let entity in MAIN.entities) {
+					MAIN.entities[entity].update();
+				}
 			}
-		}
-		for (let entity in MAIN.entities) {
-			MAIN.entities[entity].render(SYSTEM.window.viewport.g);
-		}
-		//Update and set viewport camera
-		if (mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10) {
-			vp.camera.x_r += movedX / 50;
-			vp.camera.y_r += movedY / 50;
-		}
-		vp.g.camera(vp.camera.x, vp.camera.y, vp.camera.z, vp.camera.x + cos(vp.camera.x_r), vp.camera.y + vp.camera.y_r, vp.camera.z + sin(vp.camera.x_r));
+			for (let entity in MAIN.entities) {
+				MAIN.entities[entity].render(SYSTEM.window.viewport.g);
+			}
+			//Update and set viewport camera
+			if (mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10) {
+				vp.camera.x_r += movedX / 50;
+				vp.camera.y_r += movedY / 50;
+			}
+			vp.g.camera(vp.camera.x, vp.camera.y, vp.camera.z, vp.camera.x + cos(vp.camera.x_r), vp.camera.y + vp.camera.y_r, vp.camera.z + sin(vp.camera.x_r));
 
-		//Render viewport
-		image(SYSTEM.window.viewport.g, SYSTEM.window.viewport.x + 10, SYSTEM.window.viewport.y + 15);
+			//Render viewport
+			image(SYSTEM.window.viewport.g, 10, 15);
+		})
 
 		//Update all entities
 	} catch (err) {
