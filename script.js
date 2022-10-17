@@ -63,6 +63,7 @@ var SYSTEM = {
 }
 var MAIN = {
 	_RESERVED_NAMES: ["tick"],
+	keys: [],
 	globalVariables: {
 		tick: 0,
 	},
@@ -162,6 +163,9 @@ class Entity {
 			case "and" : return this.and(CODE_INFO.slice(1));
 			case "or" : return this.or(CODE_INFO.slice(1));
 
+			/** Input **/
+			case "getKey": return this.getKey(CODE_INFO[1]);
+
 			/** Logic **/
 			case "if" : return this.ifStatement(CODE_INFO[1],CODE_INFO[2],CODE_INFO[3]);
 			
@@ -195,8 +199,8 @@ class Entity {
 	//Sets variable <name> to <value>
 	setGlobalVariable(name, value) {
 		try {
-			if(MAIN._RESERVEDNAMES.includes(name)){
-				throw name + " is a restricted variable name! Try naming your variable something else."
+			if(MAIN._RESERVED_NAMES.includes(name)){
+				throw "'" + name + "' is a restricted variable name! Try naming your variable something else."
 			}
 			MAIN.globalVariables[name] = value;
 			return 0;
@@ -274,14 +278,19 @@ class Entity {
 	or(args){
 		return args.find((i) => i) != undefined;
 	}
+
+	//Input
+	getKey(code){
+		return !!MAIN.keys[code];
+	}
 	
 	//Conditional
 	ifStatement(condition,option1,option2){
 		try{
 			if(this.EVALUATE_CODE(condition)){
-				return this.EVALUATE_CODE(option1);
+				return option1 != "pass" ? this.EVALUATE_CODE(option1) : 0;
 			}else{
-				return this.EVALUATE_CODE(option2);
+				return option2 != "pass" ? this.EVALUATE_CODE(option2) : 0;
 			}
 		}catch(err){
 			nonFatalError("Could not complete if statement!\n" + err);
@@ -368,11 +377,11 @@ function Block(code, x, y) {
 			args = ["Variable Name"];
 			colorF = color('Beige');
 			break;
-			
-		case "print":
-			name = "Print Message";
-			args = ["Message"];
-			colorF = color('DeepSkyBlue');
+
+		case "getKey":
+			name = "Is Key Pressed"
+			args = ["Javascript Keycode"]
+			colorF = color('HotPink');
 			break;
 			
 		case "concat":
@@ -437,6 +446,13 @@ function Block(code, x, y) {
 			args = ["Condition","Option 1","Option 2"]
 			colorF = color('Khaki');
 			break;
+			
+		case "print":
+			name = "Print Message";
+			args = ["Message"];
+			colorF = color('DeepSkyBlue');
+			break;
+			
 		default:
 			name = code[0] + "\nINVALID FUNCTION!";
 			args = [];
@@ -774,6 +790,12 @@ function syntaxError(msg) {
 String.prototype.splice = function(ind, str, rem) {
 	return this.slice(0, ind) + str + this.slice(ind + rem);
 };
+function keyPressed(){
+	MAIN.keys[keyCode] = true;
+}
+function keyReleased(){
+	MAIN.keys[keyCode] = false;
+}
 function mouseWheel(event){
 	SYSTEM.window.code.blockScroll = min(SYSTEM.window.code.blockScroll + event.delta, 0);
 }
