@@ -41,6 +41,8 @@ var SYSTEM = {
 			unsavedInitialCode: undefined, //String containing the UNSAVED initial code
 			unsavedUpdateCode: undefined, //String containing the UNSAVED update code
 			input: undefined, //Placeholder which has the <textarea> dom object stored in it
+			blockCanvas: undefined,
+			blockScroll: 0,
 		},
 		viewport: {
 			x: undefined,
@@ -147,6 +149,7 @@ class Entity {
 			case "sub": return CODE_INFO[1] * 1 - CODE_INFO[2] * 1;
 			case "mult": return this.multiplyAll(CODE_INFO.slice(1));
 			case "div": return (CODE_INFO[1] * 1) / (CODE_INFO[2] * 1);
+			case "trig": return this.trig(CODE_INFO[1], CODE_INFO[2]);
 			
 			case "equals" : return CODE_INFO[1] == CODE_INFO[2];
 			case "notequals" : return !(CODE_INFO[1] == CODE_INFO[2]);
@@ -219,6 +222,20 @@ class Entity {
 		let ret = 1;
 		numbers.forEach((i) => { ret *= i * 1 });
 		return ret;
+	}
+	//Trigonomic Functions
+	trig(type, number){
+		switch(type){
+			case "cos": return Math.cos(number);
+			case "sin": return Math.sin(number);
+			case "tan": return Math.tan(number);
+			case "acos": return Math.acos(number);
+			case "asin": return Math.asin(number);
+			case "atan": return Math.atan(number);
+			default: 
+				nonFatalError(type + " is not a valid trig function.");
+				break;
+		}
 	}
 	
 	//Returns true if all args return true
@@ -347,6 +364,11 @@ function Block(code, x, y) {
 			args = ["#1","N2"];
 			colorF = color('LimeGreen');
 			break;
+		case "trig":
+			name = "Trigonomic Function";
+			args = ["Function","Number"];
+			colorF = color('LimeGreen');
+			break;
 			
 		case "equals":
 			name = "Assert Item 1 equals Item 2"
@@ -395,40 +417,40 @@ function Block(code, x, y) {
 			}
 		}
 	}
-	fill(colorF);
-	stroke(lerpColor(colorF, color(0), 0.4));
-	strokeWeight(3);
-	rect(x, y, blockText, 17)
+	SYSTEM.window.code.blockCanvas.fill(colorF);
+	SYSTEM.window.code.blockCanvas.stroke(lerpColor(colorF, color(0), 0.4));
+	SYSTEM.window.code.blockCanvas.strokeWeight(3);
+	SYSTEM.window.code.blockCanvas.rect(x, y, blockText, 17)
 
-	textAlign(LEFT);
-	textSize(12);
-	fill(0, 0, 0);
-	noStroke();
-	text(name, x + 5, y + 13.5);
+	SYSTEM.window.code.blockCanvas.textAlign(LEFT);
+	SYSTEM.window.code.blockCanvas.textSize(12);
+	SYSTEM.window.code.blockCanvas.fill(0, 0, 0);
+	SYSTEM.window.code.blockCanvas.noStroke();
+	SYSTEM.window.code.blockCanvas.text(name, x + 5, y + 13.5);
 
 	let totalHeight = 0;
 	for (let i = 0; i < args.length; i++) {
 		//If it's another code block, recursive that b!tch, otherwise, show the arg with the proper background fill
 		if (Array.isArray(code[i + 1])) {
-			noStroke();
-			fill(255,255,255);
-			text(args[i] + ": ", x + 4, y + totalHeight + 30);
-			fill(0, 0, 0);
-			text(args[i] + ": ", x + 5, y + totalHeight + 30);
+			SYSTEM.window.code.blockCanvas.noStroke();
+			SYSTEM.window.code.blockCanvas.fill(255,255,255);
+			SYSTEM.window.code.blockCanvas.text(args[i] + ": ", x + 4, y + totalHeight + 30);
+			SYSTEM.window.code.blockCanvas.fill(0, 0, 0);
+			SYSTEM.window.code.blockCanvas.text(args[i] + ": ", x + 5, y + totalHeight + 30);
 			totalHeight += Block(code[i + 1], x + textWidth(args[i] + ": ") + 5, y + totalHeight + 20) + 15;
 		} else {
-			fill(colorF);
-			noStroke();
-			rect(x, y + totalHeight + 15, blockText, 50);
-			fill(0, 0, 0);
-			text(args[i] + ": " + code[i + 1], x + 5, y + totalHeight + 30);
+			SYSTEM.window.code.blockCanvas.fill(colorF);
+			SYSTEM.window.code.blockCanvas.noStroke();
+			SYSTEM.window.code.blockCanvas.rect(x, y + totalHeight + 15, blockText, 50);
+			SYSTEM.window.code.blockCanvas.fill(0, 0, 0);
+			SYSTEM.window.code.blockCanvas.text(args[i] + ": " + code[i + 1], x + 5, y + totalHeight + 30);
 			totalHeight += 30;
 		}
 	}
 	//The block's edge lines, helps a little bit with readability
 	if (args.length > 0) {
-		stroke(lerpColor(colorF, color(0), 0.4));
-		line(x, y, x, y + totalHeight + 30);
+		SYSTEM.window.code.blockCanvas.stroke(lerpColor(colorF, color(0), 0.4));
+		SYSTEM.window.code.blockCanvas.line(x, y, x, y + totalHeight + 30);
 		//line(x + blockText,y,x + blockText,y + totalHeight + 30);
 	}
 	return totalHeight + 20;
@@ -577,7 +599,7 @@ function codeTabView() {
 
 					//Represent all SAVED code as blocks.
 					codeList.forEach((i) => {
-						blockOffset += Block(i, 20, 50.5 + blockOffset);
+						blockOffset += Block(i, 20, SYSTEM.window.code.blockScroll + blockOffset);
 					});
 				} catch (err) {
 					fill(255);
@@ -586,7 +608,7 @@ function codeTabView() {
 					textAlign(LEFT);
 					text("SYNTAX ERROR!\n" + err, 20, 55, SYSTEM.window.code.w / 2 - 20);
 				}
-
+				image(SYSTEM.window.code.blockCanvas,20,50.5);
 				//Swap between initial and update code
 				Button({
 					x: (SYSTEM.window.code.w / 2) - 185,
@@ -709,6 +731,9 @@ function syntaxError(msg) {
 String.prototype.splice = function(ind, str, rem) {
 	return this.slice(0, ind) + str + this.slice(ind + rem);
 };
+function mouseWheel(event){
+	SYSTEM.window.code.blockScroll = min(SYSTEM.window.code.blockScroll + event.delta, 0);
+}
 function setup() {
 	//Initialize sketch
 	createCanvas(max(windowWidth, 400), max(400, windowHeight));
@@ -735,11 +760,19 @@ function setup() {
 	SYSTEM.window.code.input = createDiv('<style>.example { width: ' + (SYSTEM.window.code.w / 2 - 20) + 'px; height:' + (SYSTEM.window.code.h - 150) + 'px}</style> <textarea id="codeWindow" class="example" rows="5000" cols="500000" placeholder="Code" spellcheck="false"></textarea>');
 	SYSTEM.window.code.input.style('font-size', '16px');
 
+	//Initialize code window
+	SYSTEM.window.code.blockCanvas = createGraphics(SYSTEM.window.code.w /2 - 20, SYSTEM.window.code.h - 150);
+	
 	//TEMP: add entity
 	MAIN.entities["MainEntity"] = new Entity({ x: 90, y: 0, z: 50, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]]~["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', '[["setPos",0,0,0]]');
 }
 function draw() {
+	//Wipe all Canvases
 	background(70);
+	SYSTEM.window.code.blockCanvas.clear();
+	SYSTEM.window.viewport.g.clear();
+
+	//Main loop in debugger
 	try {
 		//Console
 		debugView();
@@ -763,7 +796,6 @@ function draw() {
 					 r = Rotation
 					**/
 			let vp = SYSTEM.window.viewport;
-			vp.g.clear();
 			vp.g.background(135, 206, 235);
 
 			//Floor [TEMP]
