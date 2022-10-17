@@ -62,7 +62,10 @@ var SYSTEM = {
 	},
 }
 var MAIN = {
-	globalVariables: {},
+	_RESERVED_NAMES: ["tick"],
+	globalVariables: {
+		tick: 0,
+	},
 	entities: {},
 };
 
@@ -141,6 +144,9 @@ class Entity {
 			case "getIntVar": return this.getInternalVariable(CODE_INFO[1]);
 			case "setPos": return this.setPosition(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
 			case "setRot": return this.setRotation(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
+				
+			case "setGloVar": return this.setGlobalVariable(CODE_INFO[1], CODE_INFO[2]);
+			case "getGloVar": return this.getGlobalVariable(CODE_INFO[1]);
 
 			/** Operations **/
 			case "concat": return CODE_INFO.slice(1).join('');
@@ -181,6 +187,28 @@ class Entity {
 	getInternalVariable(name) {
 		try{
 			return this.internalVariables[name];
+		} catch {
+			nonFatalError("Variable " + name + " does not exist or could not be fetched");
+			return undefined;
+		}
+	}
+	//Sets variable <name> to <value>
+	setGlobalVariable(name, value) {
+		try {
+			if(MAIN._RESERVEDNAMES.includes(name)){
+				throw name + " is a restricted variable name! Try naming your variable something else."
+			}
+			MAIN.globalVariables[name] = value;
+			return 0;
+		} catch (err) {
+			nonFatalError("Variable " + name + " does not exist or could not be set\n" + err);
+			return 1;
+		}
+	}
+	//Returns variable <name>
+	getGlobalVariable(name) {
+		try{
+			return MAIN.globalVariables[name];
 		} catch {
 			nonFatalError("Variable " + name + " does not exist or could not be fetched");
 			return undefined;
@@ -326,6 +354,17 @@ function Block(code, x, y) {
 			break;
 		case "getIntVar":
 			name = "Get Internal Variable";
+			args = ["Variable Name"];
+			colorF = color('Beige');
+			break;
+			
+		case "setGloVar":
+			name = "Set Global Variable";
+			args = ["Variable Name", "Value"];
+			colorF = color('Beige');
+			break;
+		case "getGloVar":
+			name = "Get Global Variable";
 			args = ["Variable Name"];
 			colorF = color('Beige');
 			break;
@@ -550,6 +589,7 @@ function codeTabView() {
 						h: 25,
 						primaryColor: color(0, 120, 0)
 					}, () => {
+						MAIN.globalVariables.tick = 0;
 						//Start update process for all entities
 						SYSTEM.window.code.playing = true;
 						//Clear console
@@ -594,6 +634,7 @@ function codeTabView() {
 						TEMP = SYSTEM.window.code.unsavedUpdateCode.split('\n').filter((a) => a).join('~');
 					}
 					TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
+					TEMP = TEMP.replace(/g_(\w+)/g, '["getGloVar","$1"]');
 					TEMP = '[' + TEMP + ']';
 					let codeList = JSON.parse(TEMP.replace(/~/g, ','));
 
@@ -659,12 +700,14 @@ function codeTabView() {
 
 						var TEMP = SYSTEM.window.code.unsavedInitialCode.split('\n').filter((a) => a).join('~');
 						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
+						TEMP = TEMP.replace(/g_(\w+)/g, '["getGloVar","$1"]');
 						TEMP = '[' + TEMP + ']';
 						MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
 						MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
 
 						var TEMP = SYSTEM.window.code.unsavedUpdateCode.split('\n').filter((a) => a).join('~');
 						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
+						TEMP = TEMP.replace(/g_(\w+)/g, '["getGloVar","$1"]');
 						TEMP = '[' + TEMP + ']';
 						MAIN.entities[SYSTEM.window.code.selectedEntity].updateCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
 						MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode = TEMP;
@@ -771,6 +814,7 @@ function draw() {
 	background(70);
 	SYSTEM.window.code.blockCanvas.clear();
 	SYSTEM.window.viewport.g.clear();
+	MAIN.globalVariables.tick += 1;
 
 	//Main loop in debugger
 	try {
