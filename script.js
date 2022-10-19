@@ -145,7 +145,7 @@ class Entity {
 			case "getIntVar": return this.getInternalVariable(CODE_INFO[1]);
 			case "setPos": return this.setPosition(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
 			case "setRot": return this.setRotation(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
-				
+
 			case "setGloVar": return this.setGlobalVariable(CODE_INFO[1], CODE_INFO[2]);
 			case "getGloVar": return this.getGlobalVariable(CODE_INFO[1]);
 
@@ -157,18 +157,18 @@ class Entity {
 			case "mult": return this.multiplyAll(CODE_INFO.slice(1));
 			case "div": return (CODE_INFO[1] * 1) / (CODE_INFO[2] * 1);
 			case "trig": return this.trig(CODE_INFO[1], CODE_INFO[2]);
-			
-			case "equals" : return CODE_INFO[1] == CODE_INFO[2];
-			case "notequals" : return !(CODE_INFO[1] == CODE_INFO[2]);
-			case "and" : return this.and(CODE_INFO.slice(1));
-			case "or" : return this.or(CODE_INFO.slice(1));
+
+			case "equals": return CODE_INFO[1] == CODE_INFO[2];
+			case "notequals": return !(CODE_INFO[1] == CODE_INFO[2]);
+			case "and": return this.and(CODE_INFO.slice(1));
+			case "or": return this.or(CODE_INFO.slice(1));
 
 			/** Input **/
 			case "getKey": return this.getKey(CODE_INFO[1]);
 
 			/** Logic **/
-			case "if" : return this.ifStatement(CODE_INFO[1],CODE_INFO[2],CODE_INFO[3]);
-			
+			case "if": return this.ifStatement(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
+
 			/** Debug **/
 			case "print": return printMsg(CODE_INFO.slice(1).join(''));
 			default: nonFatalError("Function " + CODE_INFO[0] + " does not exist.");
@@ -189,7 +189,7 @@ class Entity {
 	}
 	//Returns variable <name>
 	getInternalVariable(name) {
-		try{
+		try {
 			return this.internalVariables[name];
 		} catch {
 			nonFatalError("Variable " + name + " does not exist or could not be fetched");
@@ -199,7 +199,7 @@ class Entity {
 	//Sets variable <name> to <value>
 	setGlobalVariable(name, value) {
 		try {
-			if(MAIN._RESERVED_NAMES.includes(name)){
+			if (MAIN._RESERVED_NAMES.includes(name)) {
 				throw "'" + name + "' is a restricted variable name! Try naming your variable something else."
 			}
 			MAIN.globalVariables[name] = value;
@@ -211,7 +211,7 @@ class Entity {
 	}
 	//Returns variable <name>
 	getGlobalVariable(name) {
-		try{
+		try {
 			return MAIN.globalVariables[name];
 		} catch {
 			nonFatalError("Variable " + name + " does not exist or could not be fetched");
@@ -256,43 +256,43 @@ class Entity {
 		return ret;
 	}
 	//Trigonomic Functions
-	trig(type, number){
-		switch(type){
+	trig(type, number) {
+		switch (type) {
 			case "cos": return Math.cos(number);
 			case "sin": return Math.sin(number);
 			case "tan": return Math.tan(number);
 			case "acos": return Math.acos(number);
 			case "asin": return Math.asin(number);
 			case "atan": return Math.atan(number);
-			default: 
+			default:
 				nonFatalError(type + " is not a valid trig function.");
 				break;
 		}
 	}
-	
+
 	//Returns true if all args return true
-	and(args){
+	and(args) {
 		return args.every((i) => i);
 	}
 	//Return true if any args return true
-	or(args){
+	or(args) {
 		return args.find((i) => i) != undefined;
 	}
 
 	//Input
-	getKey(code){
+	getKey(code) {
 		return !!MAIN.keys[code];
 	}
-	
+
 	//Conditional
-	ifStatement(condition,option1,option2){
-		try{
-			if(this.EVALUATE_CODE(condition)){
+	ifStatement(condition, option1, option2) {
+		try {
+			if (this.EVALUATE_CODE(condition)) {
 				return option1 != "pass" ? this.EVALUATE_CODE(option1) : 0;
-			}else{
+			} else {
 				return option2 != "pass" ? this.EVALUATE_CODE(option2) : 0;
 			}
-		}catch(err){
+		} catch (err) {
 			nonFatalError("Could not complete if statement!\n" + err);
 			return 1;
 		}
@@ -430,17 +430,12 @@ function codeTabView() {
 				//Add on this height to offset the next block
 				var blockOffset = 0;
 				try {
-					var TEMP;
+					var codeList;
 					if (SYSTEM.window.code.codeType) {
-						TEMP = SYSTEM.window.code.unsavedInitialCode.split('\n').filter((a) => a).join('~');
+						codeList = compile(SYSTEM.window.code.unsavedInitialCode);
 					} else {
-						TEMP = SYSTEM.window.code.unsavedUpdateCode.split('\n').filter((a) => a).join('~');
+						codeList = compile(SYSTEM.window.code.unsavedUpdateCode);
 					}
-					TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
-					TEMP = TEMP.replace(/g_(\w+)/g, '["getGloVar","$1"]');
-					TEMP = '[' + TEMP + ']';
-					let codeList = JSON.parse(TEMP.replace(/~/g, ','));
-
 					//Represent all SAVED code as blocks.
 					codeList.forEach((i) => {
 						blockOffset += Block(i, 20, SYSTEM.window.code.blockScroll + blockOffset, SYSTEM.window.code.blockCanvas);
@@ -452,7 +447,7 @@ function codeTabView() {
 					textAlign(LEFT);
 					text("SYNTAX ERROR!\n" + err, 20, 55, SYSTEM.window.code.w / 2 - 20);
 				}
-				image(SYSTEM.window.code.blockCanvas,20,50.5);
+				image(SYSTEM.window.code.blockCanvas, 20, 50.5);
 				//Swap between initial and update code
 				Button({
 					x: (SYSTEM.window.code.w / 2) - 185,
@@ -500,20 +495,15 @@ function codeTabView() {
 							Line 4: Attempt to parse code into array form and update the entity's instructions
 							Line 5: Update the entity's raw code
 						**/
+						
+						var codeList = compile(SYSTEM.window.code.unsavedInitialCode);
+						MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = codeList;
+						MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = JSON.stringify(codeList);
 
-						var TEMP = SYSTEM.window.code.unsavedInitialCode.split('\n').filter((a) => a).join('~');
-						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
-						TEMP = TEMP.replace(/g_(\w+)/g, '["getGloVar","$1"]');
-						TEMP = '[' + TEMP + ']';
-						MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
-						MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = TEMP;
 
-						var TEMP = SYSTEM.window.code.unsavedUpdateCode.split('\n').filter((a) => a).join('~');
-						TEMP = TEMP.replace(/i_(\w+)/g, '["getIntVar","$1"]');
-						TEMP = TEMP.replace(/g_(\w+)/g, '["getGloVar","$1"]');
-						TEMP = '[' + TEMP + ']';
-						MAIN.entities[SYSTEM.window.code.selectedEntity].updateCodeStack = JSON.parse(TEMP.replace(/~/g, ','));
-						MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode = TEMP;
+						var codeList = compile(SYSTEM.window.code.unsavedUpdateCode);
+						MAIN.entities[SYSTEM.window.code.selectedEntity].updateCodeStack = codeList;
+						MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode = JSON.stringify(codeList);
 
 					} catch (err) {
 						//Spam the error (cry about it)
@@ -544,16 +534,14 @@ function codeTabView() {
 						primaryColor: color(130)
 					}, () => {
 						SYSTEM.window.code.selectedEntity = key;
-
+						
 						var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
 						TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
-						TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
 						SYSTEM.window.code.unsavedInitialCode = TEMP.replace(/~/g, '\n')//Split per line
 						document.getElementById('codeWindow').innerHTML = SYSTEM.window.code.unsavedInitialCode;
-
+						
 						var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode;
 						TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
-						TEMP = TEMP.replace(/\["getIntVar","(\w+)"\]/g, "i_$1");//Eliminate unnessecary var functions
 						SYSTEM.window.code.unsavedUpdateCode = TEMP.replace(/~/g, '\n')//Split per line
 					});
 				}
@@ -577,13 +565,13 @@ function syntaxError(msg) {
 String.prototype.splice = function(ind, str, rem) {
 	return this.slice(0, ind) + str + this.slice(ind + rem);
 };
-function keyPressed(){
+function keyPressed() {
 	MAIN.keys[keyCode] = true;
 }
-function keyReleased(){
+function keyReleased() {
 	MAIN.keys[keyCode] = false;
 }
-function mouseWheel(event){
+function mouseWheel(event) {
 	SYSTEM.window.code.blockScroll = min(SYSTEM.window.code.blockScroll + event.delta, 0);
 }
 function setup() {
@@ -613,8 +601,8 @@ function setup() {
 	SYSTEM.window.code.input.style('font-size', '16px');
 
 	//Initialize code window
-	SYSTEM.window.code.blockCanvas = createGraphics(SYSTEM.window.code.w /2 - 20, SYSTEM.window.code.h - 150);
-	
+	SYSTEM.window.code.blockCanvas = createGraphics(SYSTEM.window.code.w / 2 - 20, SYSTEM.window.code.h - 150);
+
 	//TEMP: add entity
 	MAIN.entities["MainEntity"] = new Entity({ x: 90, y: 0, z: 50, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]]~["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', '[["setPos",0,0,0]]');
 }

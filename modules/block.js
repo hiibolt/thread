@@ -24,7 +24,7 @@ function Block(code, x, y, g) {
 			args = ["Variable Name"];
 			colorF = color('Beige');
 			break;
-			
+
 		case "setGloVar":
 			name = "Set Global Variable";
 			args = ["Variable Name", "Value"];
@@ -41,7 +41,7 @@ function Block(code, x, y, g) {
 			args = ["Javascript Keycode"]
 			colorF = color('HotPink');
 			break;
-			
+
 		case "concat":
 			name = "Concatenate Strings"
 			//See explanation at the top
@@ -56,7 +56,7 @@ function Block(code, x, y, g) {
 			break;
 		case "div":
 			name = "Divide N1 * N2"
-			args = ["#1","N2"];
+			args = ["#1", "N2"];
 			colorF = color('LimeGreen');
 			break;
 		case "add":
@@ -67,23 +67,23 @@ function Block(code, x, y, g) {
 			break;
 		case "sub":
 			name = "Subtract N1 - N2"
-			args = ["#1","N2"];
+			args = ["#1", "N2"];
 			colorF = color('LimeGreen');
 			break;
 		case "trig":
 			name = "Trigonomic Function";
-			args = ["Function","Number"];
+			args = ["Function", "Number"];
 			colorF = color('LimeGreen');
 			break;
-			
+
 		case "equals":
 			name = "Assert Item 1 equals Item 2"
-			args = ["Item 1","Item 2"];
+			args = ["Item 1", "Item 2"];
 			colorF = color('PaleTurquoise');
 			break;
 		case "notequals":
 			name = "Assert Item 1 does not equal Item 2"
-			args = ["Item 1","Item 2"];
+			args = ["Item 1", "Item 2"];
 			colorF = color('PaleTurquoise');
 			break;
 		case "and":
@@ -101,16 +101,16 @@ function Block(code, x, y, g) {
 
 		case "if":
 			name = "If Condition then Option 1 otherwise Option 2"
-			args = ["Condition","Option 1","Option 2"]
+			args = ["Condition", "Option 1", "Option 2"]
 			colorF = color('Khaki');
 			break;
-			
+
 		case "print":
 			name = "Print Message";
 			args = ["Message"];
 			colorF = color('DeepSkyBlue');
 			break;
-			
+
 		default:
 			name = code[0] + "\nINVALID FUNCTION!";
 			args = [];
@@ -146,7 +146,7 @@ function Block(code, x, y, g) {
 		//If it's another code block, recursive that b!tch, otherwise, show the arg with the proper background fill
 		if (Array.isArray(code[i + 1])) {
 			g.noStroke();
-			g.fill(255,255,255);
+			g.fill(255, 255, 255);
 			g.text(args[i] + ": ", x + 4, y + totalHeight + 30);
 			g.fill(0, 0, 0);
 			g.text(args[i] + ": ", x + 5, y + totalHeight + 30);
