@@ -67,23 +67,27 @@ var MAIN = {
 	globalVariables: {
 		tick: 0,
 	},
+	entitySpawnClickWait: 0,
+	entityTitle: 0,
 	entities: {},
 };
 
 /** Classes **/
 //Host entity. Core framework of what the user utilizes.
 class Entity {
-	constructor(initialTransform, model, initialCode, updateCode) {
+	constructor(name, initialTransform, model, initialCode, updateCode) {
 		//Initialize variables all entities share
-		this.x = initialTransform.x;
-		this.y = initialTransform.y;
-		this.z = initialTransform.z;
-		//this.rX = initialTransform.r_x;
-		//this.rY = initialTransform.r_y;
-		//this.rZ = initialTransform.r_z;
-		this.scale = initialTransform.scale;;
+		this.name = name;
 		this.model = model;
-		this.internalVariables = {};
+		this.internalVariables = {
+			x: initialTransform.x,
+			y: initialTransform.y,
+			z: initialTransform.z,
+			rX: initialTransform.rX,
+			rY: initialTransform.rY,
+			rZ: initialTransform.rZ,
+			scale: initialTransform.scale,
+		};
 		this.rawInitialCode = initialCode;
 		this.rawUpdateCode = updateCode;
 
@@ -107,14 +111,16 @@ class Entity {
 	}
 	render(g) {
 		g.push();
-		g.translate(this.x, this.y, this.z);
-		//g.rotate(this.rX,this.rY,this.rZ);
+		g.translate(this.internalVariables.x, this.internalVariables.y, this.internalVariables.z);
+		g.rotateX(this.internalVariables.rX);
+		g.rotateY(this.internalVariables.rY);
+		g.rotateZ(this.internalVariables.rZ);
 		switch (this.model) {
 			case "box":
 				g.fill(0);
 				g.stroke(255);
 				g.strokeWeight(2);
-				g.box(5 * this.scale);
+				g.box(5 * this.internalVariables.scale);
 				break;
 			default:
 				//insert custom model code right here lol
@@ -134,7 +140,7 @@ class Entity {
 
 		//Check for nested functions, evaluate any matches
 		for (let i = 0; i < CODE_INFO.length; i++) {
-			if (Array.isArray(CODE_INFO[i]) && CODE_INFO[0] !== "if") {
+			if (Array.isArray(CODE_INFO[i]) && CODE_INFO[0] !== "if" && CODE_INFO[0] !== "onKey") {
 				CODE_INFO[i] = this.EVALUATE_CODE(CODE_INFO[i]);
 			}
 		}
@@ -143,11 +149,13 @@ class Entity {
 			/** Variable manipulation and retrieval **/
 			case "setIntVar": return this.setInternalVariable(CODE_INFO[1], CODE_INFO[2]);
 			case "getIntVar": return this.getInternalVariable(CODE_INFO[1]);
-			case "setPos": return this.setPosition(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
-			case "setRot": return this.setRotation(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
-
 			case "setGloVar": return this.setGlobalVariable(CODE_INFO[1], CODE_INFO[2]);
 			case "getGloVar": return this.getGlobalVariable(CODE_INFO[1]);
+
+			case "setPos": return this.setPosition(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
+			case "setRot": return this.setRotation(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
+			case "shiftAxis": return this.shiftAxis(CODE_INFO[1], CODE_INFO[2]);
+
 
 			/** Operations **/
 			case "concat": return CODE_INFO.slice(1).join('');
@@ -164,13 +172,19 @@ class Entity {
 			case "or": return this.or(CODE_INFO.slice(1));
 
 			/** Input **/
+			case "onKey": return this.onKey(CODE_INFO[1], CODE_INFO[2]);
 			case "getKey": return this.getKey(CODE_INFO[1]);
 
 			/** Logic **/
 			case "if": return this.ifStatement(CODE_INFO[1], CODE_INFO[2], CODE_INFO[3]);
 
-			/** Debug **/
+			/** System **/
 			case "print": return printMsg(CODE_INFO.slice(1).join(''));
+			case "setName": return this.setName(CODE_INFO[1]);
+			case "log":
+				console.log(this.rawInitialCode);
+				console.log(this.rawUpdateCode);
+				break;
 			default: nonFatalError("Function " + CODE_INFO[0] + " does not exist.");
 		}
 	}
@@ -221,9 +235,9 @@ class Entity {
 	//Sets position to (<setX>,<setY>,<setZ>)
 	setPosition(setX, setY, setZ) {
 		try {
-			this.x = setX * 1;
-			this.y = setY * 1;
-			this.z = setZ * 1;
+			this.internalVariables.x = setX * 1;
+			this.internalVariables.y = setY * 1;
+			this.internalVariables.z = setZ * 1;
 			return 0;
 		} catch (err) {
 			nonFatalError("Could not set position!\n" + err);
@@ -233,12 +247,40 @@ class Entity {
 	//Sets rotation to (<setX>,<setY>,<setZ>)
 	setRotation(setX, setY, setZ) {
 		try {
-			this.rX = setX * 1;
-			this.rY = setY * 1;
-			this.rZ = setZ * 1;
+			this.internalVariables.rX = setX * 1;
+			this.internalVariables.rY = setY * 1;
+			this.internalVariables.rZ = setZ * 1;
 			return 0;
 		} catch (err) {
 			nonFatalError("Could not set Rotation!\n" + err);
+			return 1;
+		}
+	}
+	//Increments <axis> by <value>
+	shiftAxis(axis, value) {
+		try {
+			switch (axis) {
+				case "x":
+					this.internalVariables.x += value;
+					break;
+				case "y":
+					this.internalVariables.y += value;
+					break;
+				case "z":
+					this.internalVariables.z += value;
+					break;
+				case "rX":
+					this.internalVariables.rX += value;
+					break;
+				case "rY":
+					this.internalVariables.rY += value;
+					break;
+				case "rZ":
+					this.internalVariables.rZ += value;
+					break;
+			}
+		} catch (err) {
+			nonFatalError("Could not shift!\n" + err);
 			return 1;
 		}
 	}
@@ -270,18 +312,29 @@ class Entity {
 		}
 	}
 
-	//Returns true if all args return true
+	//Returns true if all <args>[n] return true
 	and(args) {
 		return args.every((i) => i);
 	}
-	//Return true if any args return true
+	//Return true if any one <args>[n] returns true
 	or(args) {
 		return args.find((i) => i) != undefined;
 	}
 
 	//Input
+	//Returns the state of key <code>
 	getKey(code) {
 		return !!MAIN.keys[code];
+	}
+	//When key <code> is pressed, execute <code>
+	onKey(keycode, code) {
+		if (MAIN.keys[keycode] === true) {
+			try {
+				this.EVALUATE_CODE(code);
+			} catch (err) {
+				nonFatalError("Could not execute code!\n" + err)
+			}
+		}
 	}
 
 	//Conditional
@@ -294,6 +347,16 @@ class Entity {
 			}
 		} catch (err) {
 			nonFatalError("Could not complete if statement!\n" + err);
+			return 1;
+		}
+	}
+
+	//System
+	setName(name) {
+		if (typeof name === 'string') {
+			this.name = name;
+			return 0;
+		} else {
 			return 1;
 		}
 	}
@@ -374,10 +437,17 @@ function codeTabView() {
 				text("Rotation: (x:" + e.rX + " | y: " + e.rY + " | z: " + e.rZ + ")", 20, 115);
 
 				text("Internal Variables", 20, 155);
-				let offset = -1;
-				for (let i in e.internalVariables) {
+				var offset = -1;
+				for (var i in e.internalVariables) {
 					offset++;
-					text("	" + i + ": " + e.internalVariables[i], 20, 170 + offset * 15);
+					text("	- " + i + ": " + e.internalVariables[i], 20, 170 + offset * 15);
+				}
+
+				text("Global Variables", 150, 155);
+				var offset = -1;
+				for (var i in MAIN.globalVariables) {
+					offset++;
+					text("   - " + i + ": " + MAIN.globalVariables[i], 150, 170 + offset * 15);
 				}
 				break;
 			case "Test":
@@ -424,7 +494,6 @@ function codeTabView() {
 					SYSTEM.window.code.unsavedInitialCode = document.getElementById('codeWindow').value;
 				} else {
 					SYSTEM.window.code.unsavedUpdateCode = document.getElementById('codeWindow').value;
-
 				}
 
 				//Add on this height to offset the next block
@@ -495,7 +564,7 @@ function codeTabView() {
 							Line 4: Attempt to parse code into array form and update the entity's instructions
 							Line 5: Update the entity's raw code
 						**/
-						
+
 						var codeList = compile(SYSTEM.window.code.unsavedInitialCode);
 						MAIN.entities[SYSTEM.window.code.selectedEntity].initialCodeStack = codeList;
 						MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode = JSON.stringify(codeList);
@@ -516,8 +585,30 @@ function codeTabView() {
 				noStroke();
 				textSize(18);
 				textAlign(LEFT);
-				text("Entity List:", 20, 63.5);
+				text("Entity List", 20, 63.5);
 
+				textSize(13);
+				textAlign(LEFT);
+				text("Entity Selected: " + (SYSTEM.window.code.selectedEntity == undefined ? "None" : SYSTEM.window.code.selectedEntity), 20, 82.5);
+				//Add entity button
+				if (MAIN.entitySpawnClickWait > 100) {
+					Button({
+						x: 110,
+						y: 46.5,
+						offsetX: SYSTEM.window.code.x,
+						offsetY: SYSTEM.window.code.y,
+						text: "Add",
+						w: 40,
+						h: 20,
+						primaryColor: color(130)
+					}, () => {
+						MAIN.entities["entity" + str(MAIN.entityTitle).padStart(3, '0')] = new Entity("Unnamed", { x: 0, y: 0, z: 0, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setName","Unnamed"]]', '[]');
+						MAIN.entityTitle++;
+						MAIN.entitySpawnClickWait = 0;
+					})
+				} else {
+					MAIN.entitySpawnClickWait++;
+				}
 				//Entity list
 				let ind = -1;
 				for (let key in MAIN.entities) {
@@ -525,21 +616,21 @@ function codeTabView() {
 					//Entity selection
 					Button({
 						x: 20,
-						y: 73.5 + ind * 50,
+						y: 93.5 + ind * 50,
 						offsetX: SYSTEM.window.code.x,
 						offsetY: SYSTEM.window.code.y,
-						text: key,
+						text: MAIN.entities[key].name,
 						w: 100,
 						h: 40,
 						primaryColor: color(130)
 					}, () => {
 						SYSTEM.window.code.selectedEntity = key;
-						
+						SYSTEM.window.code.codeType = true;
 						var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawInitialCode;
 						TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
 						SYSTEM.window.code.unsavedInitialCode = TEMP.replace(/~/g, '\n')//Split per line
-						document.getElementById('codeWindow').innerHTML = SYSTEM.window.code.unsavedInitialCode;
-						
+						document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedInitialCode;
+
 						var TEMP = MAIN.entities[SYSTEM.window.code.selectedEntity].rawUpdateCode;
 						TEMP = TEMP.slice(1, -1);//Ignore edge brackets for readability
 						SYSTEM.window.code.unsavedUpdateCode = TEMP.replace(/~/g, '\n')//Split per line
@@ -603,8 +694,8 @@ function setup() {
 	//Initialize code window
 	SYSTEM.window.code.blockCanvas = createGraphics(SYSTEM.window.code.w / 2 - 20, SYSTEM.window.code.h - 150);
 
-	//TEMP: add entity
-	MAIN.entities["MainEntity"] = new Entity({ x: 90, y: 0, z: 50, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setIntVar","Health","100"]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["setIntVar","Health",["mult",["getIntVar","Health"],1,23]]~["print",["concat","You have ",["getIntVar","Health"]," health"]]~["print",["mult",3,2,-2]]~["nonexistantfunctionshouldthrowwarning","pretendarg1","pretendarg2"]]', '[["setPos",0,0,0]]');
+	//Create the main camera
+	MAIN.entities["Camera"] = new Entity("Camera", { x: 90, y: 0, z: 50, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[["print","Camera Initialized"]~["setPos",0,0,0]~["setRot",0,0,0]~["log"]]', '[["onKey",87,["shiftAxis","x",1]]~["onKey",83,["shiftAxis","x",-1]]~["onKey",65,["shiftAxis","z",1]]~["onKey",68,["shiftAxis","z",-1]]]');
 }
 function draw() {
 	//Wipe all Canvases
@@ -635,6 +726,12 @@ function draw() {
 					 x/y/z = X, y, and z coordinates
 					 r = Rotation
 					**/
+			//SYSTEM.window.viewport.camera.x = MAIN.entities["Camera"].internalVariables.x;
+			//SYSTEM.window.viewport.camera.y = MAIN.entities["Camera"].internalVariables.y;
+			//SYSTEM.window.viewport.camera.z = MAIN.entities["Camera"].internalVariables.z;
+			SYSTEM.window.viewport.camera.rX = MAIN.entities["Camera"].internalVariables.rX
+			SYSTEM.window.viewport.camera.rY = MAIN.entities["Camera"].internalVariables.rY
+			SYSTEM.window.viewport.camera.rZ = MAIN.entities["Camera"].internalVariables.rZ
 			let vp = SYSTEM.window.viewport;
 			vp.g.background(135, 206, 235);
 

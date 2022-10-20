@@ -14,6 +14,12 @@ function Block(code, x, y, g) {
 			args = ["X", "Y", "Z"];
 			colorF = color('Magenta');
 			break;
+		case "shiftAxis":
+			name = "Adds Value to Axis of Entity";
+			args = ["Axis", "Value"];
+			colorF = color('Magenta');
+			break;
+			
 		case "setIntVar":
 			name = "Set Internal Variable";
 			args = ["Variable Name", "Value"];
@@ -24,7 +30,6 @@ function Block(code, x, y, g) {
 			args = ["Variable Name"];
 			colorF = color('Beige');
 			break;
-
 		case "setGloVar":
 			name = "Set Global Variable";
 			args = ["Variable Name", "Value"];
@@ -39,6 +44,11 @@ function Block(code, x, y, g) {
 		case "getKey":
 			name = "Is Key Pressed"
 			args = ["Javascript Keycode"]
+			colorF = color('HotPink');
+			break;
+		case "onKey":
+			name = "If Key Pressed Then"
+			args = ["Javascript Keycode","Code"]
 			colorF = color('HotPink');
 			break;
 
@@ -108,6 +118,16 @@ function Block(code, x, y, g) {
 		case "print":
 			name = "Print Message";
 			args = ["Message"];
+			colorF = color('DeepSkyBlue');
+			break;
+		case "setName":
+			name = "Sets the name and tag of the entity";
+			args = ["Name"];
+			colorF = color('DeepSkyBlue');
+			break;
+		case "log":
+			name = "[Developer] Logs code to console";
+			args = [];
 			colorF = color('DeepSkyBlue');
 			break;
 
