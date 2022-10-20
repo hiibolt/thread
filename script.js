@@ -603,7 +603,7 @@ function codeTabView() {
 						h: 20,
 						primaryColor: color(130)
 					}, () => {
-						MAIN.entities["entity" + str(MAIN.entityTitle).padStart(3, '0')] = new Entity("Unnamed", { x: 0, y: 0, z: 0, r_x: 0, r_y: 0, r_z: 0, scale: 3 }, "box", '[["setName","Unnamed"]]', '[]');
+						MAIN.entities["entity" + str(MAIN.entityTitle).padStart(3, '0')] = new Entity("Box", { x: 0, y: 0, z: 0, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[["setName","Unnamed"]]', '[]');
 						MAIN.entityTitle++;
 						MAIN.entitySpawnClickWait = 0;
 					})
@@ -697,6 +697,7 @@ function setup() {
 
 	//Create the main camera
 	MAIN.entities["Camera"] = new Entity("Camera", { x: 90, y: 0, z: 50, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[["setName","Camera"]~["setPos",0,0,0]~["setRot",0,0,0]~["print","Camera Initialized"]~["log"]]', '[["onKey",81,["shiftAxis","rY",1]]~["onKey",69,["shiftAxis","rY",-1]]~["onKey",87,["shiftAxis","x",["trig","sin",["getIntVar","rY"]]]]~["onKey",87,["shiftAxis","z",["trig","cos",["getIntVar","rY"]]]]]');
+	MAIN.entities["StarterBox"] = new Entity("StarterBox", { x: 90, y: 0, z: 150, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[]', '[]');
 }
 function draw() {
 	//Wipe all Canvases
@@ -734,6 +735,14 @@ function draw() {
 				SYSTEM.window.viewport.camera.rX = MAIN.entities["Camera"].internalVariables.rX
 				SYSTEM.window.viewport.camera.rY = MAIN.entities["Camera"].internalVariables.rY
 				SYSTEM.window.viewport.camera.rZ = MAIN.entities["Camera"].internalVariables.rZ
+			} else {
+				if (mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10) {
+					SYSTEM.window.viewport.camera.x += (MAIN.keys[87] ? sin(SYSTEM.window.viewport.camera.rY) * 5: 0) - (MAIN.keys[83] ? sin(SYSTEM.window.viewport.camera.rY) * 5: 0) + (MAIN.keys[65] ? sin(SYSTEM.window.viewport.camera.rY + HALF_PI) * 2.5: 0) + (MAIN.keys[68] ? sin(SYSTEM.window.viewport.camera.rY - HALF_PI) * 2.5: 0);
+					SYSTEM.window.viewport.camera.y += (MAIN.keys[32] ? 2.5 : 0) - (MAIN.keys[16] ? 2.5 : 0);
+					SYSTEM.window.viewport.camera.z += (MAIN.keys[87] ? cos(SYSTEM.window.viewport.camera.rY) *  5: 0) - (MAIN.keys[83] ? cos(SYSTEM.window.viewport.camera.rY) * 5: 0) + (MAIN.keys[65] ? cos(SYSTEM.window.viewport.camera.rY + HALF_PI) * 2.5: 0) + (MAIN.keys[68] ? cos(SYSTEM.window.viewport.camera.rY - HALF_PI) * 2.5: 0);
+					SYSTEM.window.viewport.camera.rY -= movedX / 50;
+					SYSTEM.window.viewport.camera.rX += movedY / 50;
+				}
 			}
 			let vp = SYSTEM.window.viewport;
 			vp.g.background(135, 206, 235);
@@ -754,11 +763,8 @@ function draw() {
 			for (let entity in MAIN.entities) {
 				MAIN.entities[entity].render(SYSTEM.window.viewport.g);
 			}
-			//Update and set viewport camera
-			if (mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10) {
-				vp.camera.rY -= movedX / 50;
-				vp.camera.rX += movedY / 50;
-			}
+			//Render Camera
+			vp.g.perspective(PI / 3, SYSTEM.window.viewport.w / SYSTEM.window.viewport.h, 0, 500);
 			vp.g.camera(vp.camera.x, vp.camera.y, vp.camera.z, vp.camera.x + sin(vp.camera.rY), vp.camera.y + vp.camera.rX, vp.camera.z + cos(vp.camera.rY));
 
 			//Render viewport
