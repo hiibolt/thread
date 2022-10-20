@@ -71,6 +71,7 @@ var MAIN = {
 	entitySpawnClickWait: 0,
 	entityTitle: 0,
 	entities: {},
+	primaryFont: undefined
 };
 
 /** Classes **/
@@ -117,6 +118,16 @@ class Entity {
 		g.rotateY(this.internalVariables.rY);
 		g.rotateZ(this.internalVariables.rZ);
 		switch (this.model) {
+			case "camera":
+				g.push();
+				g.fill(0);
+				g.stroke(255);
+				g.strokeWeight(2);
+				g.rotateZ(HALF_PI);
+				g.rotateX(-HALF_PI);
+				g.cone(10, 25, 4, 4);
+				g.pop();
+				break;
 			case "box":
 				g.fill(0);
 				g.stroke(255);
@@ -128,6 +139,21 @@ class Entity {
 				break;
 		}
 		g.pop();
+
+		//Display the name over the entity
+		if (!SYSTEM.window.code.playing) {
+			g.push();
+			g.translate(this.internalVariables.x, this.internalVariables.y - 25, this.internalVariables.z);
+			g.rotateY(PI);
+			g.fill(255, 255, 255);
+			g.stroke(255, 255, 255);
+			g.strokeWeight(5);
+			g.textAlign(CENTER);
+			g.textSize(20);
+			g.textFont(MAIN.primaryFont)
+			g.text(this.name, 0, 0);
+			g.pop();
+		}
 	}
 
 	/** INTERNAL FUNCTIONS **/
@@ -695,14 +721,18 @@ function setup() {
 	//Initialize code window
 	SYSTEM.window.code.blockCanvas = createGraphics(SYSTEM.window.code.w / 2 - 20, SYSTEM.window.code.h - 150);
 
+	//Load Font
+	MAIN.primaryFont = loadFont('assets/font.otf');
+
 	//Create the main camera
-	MAIN.entities["Camera"] = new Entity("Camera", { x: 90, y: 0, z: 50, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[["setName","Camera"]~["setPos",0,0,0]~["setRot",0,0,0]~["print","Camera Initialized"]~["log"]]', '[["onKey",81,["shiftAxis","rY",1]]~["onKey",69,["shiftAxis","rY",-1]]~["onKey",87,["shiftAxis","x",["trig","sin",["getIntVar","rY"]]]]~["onKey",87,["shiftAxis","z",["trig","cos",["getIntVar","rY"]]]]]');
+	MAIN.entities["Camera"] = new Entity("Camera", { x: 90, y: 0, z: 0, rX: 0, rY: 0, rZ: 0, scale: 3 }, "camera", '[["setName","Camera"]~["setPos",90,0,0]~["setRot",0,0,0]~["print","Camera Initialized"]~["log"]]', '[["onKey",81,["shiftAxis","rY",1]]~["onKey",69,["shiftAxis","rY",-1]]~["onKey",87,["shiftAxis","x",["trig","sin",["getIntVar","rY"]]]]~["onKey",87,["shiftAxis","z",["trig","cos",["getIntVar","rY"]]]]]');
 	MAIN.entities["StarterBox"] = new Entity("StarterBox", { x: 90, y: 0, z: 150, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[]', '[]');
 }
 function draw() {
 	//Wipe all Canvases
 	background(70);
 	SYSTEM.window.code.blockCanvas.clear();
+	SYSTEM.window.viewport.g.reset();
 	SYSTEM.window.viewport.g.clear();
 	MAIN.globalVariables.tick += 1;
 	//Main loop in debugger
@@ -736,17 +766,16 @@ function draw() {
 				SYSTEM.window.viewport.camera.rY = MAIN.entities["Camera"].internalVariables.rY
 				SYSTEM.window.viewport.camera.rZ = MAIN.entities["Camera"].internalVariables.rZ
 			} else {
+				SYSTEM.window.viewport.camera.x += (MAIN.keys[87] ? sin(SYSTEM.window.viewport.camera.rY) * 5 : 0) - (MAIN.keys[83] ? sin(SYSTEM.window.viewport.camera.rY) * 5 : 0) + (MAIN.keys[65] ? sin(SYSTEM.window.viewport.camera.rY + HALF_PI) * 2.5 : 0) + (MAIN.keys[68] ? sin(SYSTEM.window.viewport.camera.rY - HALF_PI) * 2.5 : 0);
+				SYSTEM.window.viewport.camera.y += (MAIN.keys[32] ? 2.5 : 0) - (MAIN.keys[16] ? 2.5 : 0);
+				SYSTEM.window.viewport.camera.z += (MAIN.keys[87] ? cos(SYSTEM.window.viewport.camera.rY) * 5 : 0) - (MAIN.keys[83] ? cos(SYSTEM.window.viewport.camera.rY) * 5 : 0) + (MAIN.keys[65] ? cos(SYSTEM.window.viewport.camera.rY + HALF_PI) * 2.5 : 0) + (MAIN.keys[68] ? cos(SYSTEM.window.viewport.camera.rY - HALF_PI) * 2.5 : 0);
 				if (mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10) {
-					SYSTEM.window.viewport.camera.x += (MAIN.keys[87] ? sin(SYSTEM.window.viewport.camera.rY) * 5: 0) - (MAIN.keys[83] ? sin(SYSTEM.window.viewport.camera.rY) * 5: 0) + (MAIN.keys[65] ? sin(SYSTEM.window.viewport.camera.rY + HALF_PI) * 2.5: 0) + (MAIN.keys[68] ? sin(SYSTEM.window.viewport.camera.rY - HALF_PI) * 2.5: 0);
-					SYSTEM.window.viewport.camera.y += (MAIN.keys[32] ? 2.5 : 0) - (MAIN.keys[16] ? 2.5 : 0);
-					SYSTEM.window.viewport.camera.z += (MAIN.keys[87] ? cos(SYSTEM.window.viewport.camera.rY) *  5: 0) - (MAIN.keys[83] ? cos(SYSTEM.window.viewport.camera.rY) * 5: 0) + (MAIN.keys[65] ? cos(SYSTEM.window.viewport.camera.rY + HALF_PI) * 2.5: 0) + (MAIN.keys[68] ? cos(SYSTEM.window.viewport.camera.rY - HALF_PI) * 2.5: 0);
 					SYSTEM.window.viewport.camera.rY -= movedX / 50;
 					SYSTEM.window.viewport.camera.rX += movedY / 50;
 				}
 			}
 			let vp = SYSTEM.window.viewport;
 			vp.g.background(135, 206, 235);
-
 			//Floor [TEMP]
 			vp.g.push();
 			vp.g.translate(0, 50, 0)
@@ -761,10 +790,14 @@ function draw() {
 				}
 			}
 			for (let entity in MAIN.entities) {
-				MAIN.entities[entity].render(SYSTEM.window.viewport.g);
+				if (entity == "Camera" && SYSTEM.window.code.playing) {
+					continue;
+				} else {
+					MAIN.entities[entity].render(SYSTEM.window.viewport.g);
+				}
 			}
 			//Render Camera
-			vp.g.perspective(PI / 3, SYSTEM.window.viewport.w / SYSTEM.window.viewport.h, 0, 500);
+			vp.g.perspective(PI / 3, SYSTEM.window.viewport.w / SYSTEM.window.viewport.h, 0.01, 500);
 			vp.g.camera(vp.camera.x, vp.camera.y, vp.camera.z, vp.camera.x + sin(vp.camera.rY), vp.camera.y + vp.camera.rX, vp.camera.z + cos(vp.camera.rY));
 
 			//Render viewport
