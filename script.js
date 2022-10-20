@@ -52,11 +52,12 @@ var SYSTEM = {
 			g: undefined,
 
 			camera: {
-				x: 100,
-				y: 10,
+				x: 0,
+				y: 0,
 				z: 0,
-				x_r: 0, //2d rotation
-				y_r: 0, //look up/down rotation
+				rX: 0, //look up/down rotation
+				rY: 0, //2d rotation
+				rZ: 0,
 			}
 		}
 	},
@@ -247,9 +248,9 @@ class Entity {
 	//Sets rotation to (<setX>,<setY>,<setZ>)
 	setRotation(setX, setY, setZ) {
 		try {
-			this.internalVariables.rX = setX * 1;
-			this.internalVariables.rY = setY * 1;
-			this.internalVariables.rZ = setZ * 1;
+			this.internalVariables.rX = (setX * 1) / 180 * PI;
+			this.internalVariables.rY = (setY * 1) / 180 * PI;
+			this.internalVariables.rZ = (setZ * 1) / 180 * PI;
 			return 0;
 		} catch (err) {
 			nonFatalError("Could not set Rotation!\n" + err);
@@ -270,13 +271,13 @@ class Entity {
 					this.internalVariables.z += value;
 					break;
 				case "rX":
-					this.internalVariables.rX += value;
+					this.internalVariables.rX += value / 180 * PI;
 					break;
 				case "rY":
-					this.internalVariables.rY += value;
+					this.internalVariables.rY += value / 180 * PI;
 					break;
 				case "rZ":
-					this.internalVariables.rZ += value;
+					this.internalVariables.rZ += value / 180 * PI;
 					break;
 			}
 		} catch (err) {
@@ -695,7 +696,7 @@ function setup() {
 	SYSTEM.window.code.blockCanvas = createGraphics(SYSTEM.window.code.w / 2 - 20, SYSTEM.window.code.h - 150);
 
 	//Create the main camera
-	MAIN.entities["Camera"] = new Entity("Camera", { x: 90, y: 0, z: 50, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[["print","Camera Initialized"]~["setPos",0,0,0]~["setRot",0,0,0]~["log"]]', '[["onKey",87,["shiftAxis","x",1]]~["onKey",83,["shiftAxis","x",-1]]~["onKey",65,["shiftAxis","z",1]]~["onKey",68,["shiftAxis","z",-1]]]');
+	MAIN.entities["Camera"] = new Entity("Camera", { x: 90, y: 0, z: 50, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[["setName","Camera"]~["setPos",0,0,0]~["setRot",0,0,0]~["print","Camera Initialized"]~["log"]]', '[["onKey",81,["shiftAxis","rY",1]]~["onKey",69,["shiftAxis","rY",-1]]~["onKey",87,["shiftAxis","x",["trig","sin",["getIntVar","rY"]]]]~["onKey",87,["shiftAxis","z",["trig","cos",["getIntVar","rY"]]]]]');
 }
 function draw() {
 	//Wipe all Canvases
@@ -726,12 +727,14 @@ function draw() {
 					 x/y/z = X, y, and z coordinates
 					 r = Rotation
 					**/
-			//SYSTEM.window.viewport.camera.x = MAIN.entities["Camera"].internalVariables.x;
-			//SYSTEM.window.viewport.camera.y = MAIN.entities["Camera"].internalVariables.y;
-			//SYSTEM.window.viewport.camera.z = MAIN.entities["Camera"].internalVariables.z;
-			SYSTEM.window.viewport.camera.rX = MAIN.entities["Camera"].internalVariables.rX
-			SYSTEM.window.viewport.camera.rY = MAIN.entities["Camera"].internalVariables.rY
-			SYSTEM.window.viewport.camera.rZ = MAIN.entities["Camera"].internalVariables.rZ
+			if (SYSTEM.window.code.playing) {
+				SYSTEM.window.viewport.camera.x = MAIN.entities["Camera"].internalVariables.x;
+				SYSTEM.window.viewport.camera.y = MAIN.entities["Camera"].internalVariables.y;
+				SYSTEM.window.viewport.camera.z = MAIN.entities["Camera"].internalVariables.z;
+				SYSTEM.window.viewport.camera.rX = MAIN.entities["Camera"].internalVariables.rX
+				SYSTEM.window.viewport.camera.rY = MAIN.entities["Camera"].internalVariables.rY
+				SYSTEM.window.viewport.camera.rZ = MAIN.entities["Camera"].internalVariables.rZ
+			}
 			let vp = SYSTEM.window.viewport;
 			vp.g.background(135, 206, 235);
 
@@ -753,16 +756,14 @@ function draw() {
 			}
 			//Update and set viewport camera
 			if (mouseIsPressed && mouseX > SYSTEM.window.viewport.x + 10 && mouseX < SYSTEM.window.viewport.x + SYSTEM.window.viewport.w - 10 && mouseY > SYSTEM.window.viewport.y + 15 && mouseY < SYSTEM.window.viewport.y + SYSTEM.window.viewport.h - 10) {
-				vp.camera.x_r += movedX / 50;
-				vp.camera.y_r += movedY / 50;
+				vp.camera.rY -= movedX / 50;
+				vp.camera.rX += movedY / 50;
 			}
-			vp.g.camera(vp.camera.x, vp.camera.y, vp.camera.z, vp.camera.x + cos(vp.camera.x_r), vp.camera.y + vp.camera.y_r, vp.camera.z + sin(vp.camera.x_r));
+			vp.g.camera(vp.camera.x, vp.camera.y, vp.camera.z, vp.camera.x + sin(vp.camera.rY), vp.camera.y + vp.camera.rX, vp.camera.z + cos(vp.camera.rY));
 
 			//Render viewport
 			image(SYSTEM.window.viewport.g, 10, 15);
 		})
-
-		//Update all entities
 	} catch (err) {
 		background(120);
 		fill(255);
