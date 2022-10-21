@@ -123,9 +123,10 @@ class Entity {
 				g.fill(0);
 				g.stroke(255);
 				g.strokeWeight(2);
+				g.translate(0,0,0);
 				g.rotateZ(HALF_PI);
 				g.rotateX(-HALF_PI);
-				g.cone(10, 25, 4, 4);
+				g.cone(10, 25, 5, 1);
 				g.pop();
 				break;
 			case "box":
@@ -629,7 +630,7 @@ function codeTabView() {
 						h: 20,
 						primaryColor: color(130)
 					}, () => {
-						MAIN.entities["entity" + str(MAIN.entityTitle).padStart(3, '0')] = new Entity("Box", { x: 0, y: 0, z: 0, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[["setName","Unnamed"]]', '[]');
+						MAIN.entities["entity" + str(MAIN.entityTitle).padStart(3, '0')] = new Entity("Unnamed", { x: 0, y: 0, z: 0, rX: 0, rY: 0, rZ: 0, scale: 3 }, "box", '[["setName","Unnamed"]]', '[]');
 						MAIN.entityTitle++;
 						MAIN.entitySpawnClickWait = 0;
 					})

@@ -183,9 +183,9 @@ function Block(code, x, y, g) {
 	//The block's edge lines, helps a little bit with readability
 	if (args.length > 0) {
 		g.stroke(lerpColor(colorF, color(0), 0.4));
-		g.line(x, y, x, y + totalHeight + 30);
+		g.line(x, y, x, y + totalHeight + 60);
 		//line(x + blockText,y,x + blockText,y + totalHeight + 30);
 	}
-	return totalHeight + 20;
+	return totalHeight + 60;
 
 }
