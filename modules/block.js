@@ -1,4 +1,4 @@
-function Block(code, x, y, g) {
+function Block(code, x, y, g, code_position, code_viewport) {
 	let name;
 	let args;
 	let colorF;
@@ -19,7 +19,7 @@ function Block(code, x, y, g) {
 			args = ["Axis", "Value"];
 			colorF = color('Magenta');
 			break;
-			
+
 		case "setIntVar":
 			name = "Set Internal Variable";
 			args = ["Variable Name", "Value"];
@@ -48,7 +48,7 @@ function Block(code, x, y, g) {
 			break;
 		case "onKey":
 			name = "If Key Pressed Then"
-			args = ["Javascript Keycode","Code"]
+			args = ["Javascript Keycode", "Code"]
 			colorF = color('HotPink');
 			break;
 
@@ -151,9 +151,27 @@ function Block(code, x, y, g) {
 		}
 	}
 	g.fill(colorF);
-	g.stroke(lerpColor(colorF, color(0), 0.4));
+	if (code_viewport.selectedCodeLocation == code_position + "") {
+		g.fill(lerpColor(colorF, color(255), 0.4 + cos(millis() / 100) / 2));
+		g.stroke(255);
+	} else {
+		if (mouseX > x + code_viewport.x + 20 && mouseX < x + code_viewport.x + 20 + blockText && mouseY > y + code_viewport.y + 50.5 && mouseY < y + code_viewport.y + 17 + 50.5) {
+			g.fill(colorF);
+			g.stroke(lerpColor(colorF, color(0), 0.2));
+			if (mouseIsPressed) {
+				code_viewport.selectedCodeLocation = code_position;
+			}
+		} else {
+			g.fill(colorF);
+			g.stroke(lerpColor(colorF, color(0), 0.4));
+		}
+	}
+
 	g.strokeWeight(3);
-	g.rect(x, y, blockText, 17)
+	g.rect(x, y, blockText, 17);
+
+	//If block selected
+
 
 	g.textAlign(LEFT);
 	g.textSize(12);
@@ -170,7 +188,7 @@ function Block(code, x, y, g) {
 			g.text(args[i] + ": ", x + 4, y + totalHeight + 30);
 			g.fill(0, 0, 0);
 			g.text(args[i] + ": ", x + 5, y + totalHeight + 30);
-			totalHeight += Block(code[i + 1], x + textWidth(args[i] + ": ") + 5, y + totalHeight + 20, g) + 15;
+			totalHeight += Block(code[i + 1], x + textWidth(args[i] + ": ") + 5, y + totalHeight + 20, g, code_position + (i + ""), code_viewport) + 15;
 		} else {
 			g.fill(colorF);
 			g.noStroke();
@@ -182,7 +200,12 @@ function Block(code, x, y, g) {
 	}
 	//The block's edge lines, helps a little bit with readability
 	if (args.length > 0) {
-		g.stroke(lerpColor(colorF, color(0), 0.4));
+
+		if (code_viewport.selectedCodeLocation == code_position + "") {
+			g.stroke(255);
+		} else {
+			g.stroke(lerpColor(colorF, color(0), 0.4));
+		}
 		g.line(x, y, x, y + totalHeight + 60);
 		//line(x + blockText,y,x + blockText,y + totalHeight + 30);
 	}

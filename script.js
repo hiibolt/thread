@@ -43,6 +43,7 @@ var SYSTEM = {
 			input: undefined, //Placeholder which has the <textarea> dom object stored in it
 			blockCanvas: undefined,
 			blockScroll: 0,
+			selectedCodeLocation: "11",
 		},
 		viewport: {
 			x: undefined,
@@ -534,8 +535,8 @@ function codeTabView() {
 						codeList = compile(SYSTEM.window.code.unsavedUpdateCode);
 					}
 					//Represent all SAVED code as blocks.
-					codeList.forEach((i) => {
-						blockOffset += Block(i, 20, SYSTEM.window.code.blockScroll + blockOffset, SYSTEM.window.code.blockCanvas);
+					codeList.forEach((i, ind) => {
+						blockOffset += Block(i, 20, SYSTEM.window.code.blockScroll + blockOffset, SYSTEM.window.code.blockCanvas, ind, SYSTEM.window.code);
 					});
 				} catch (err) {
 					fill(255);
@@ -557,6 +558,7 @@ function codeTabView() {
 					primaryColor: color(120),
 				}, () => {
 					SYSTEM.window.code.codeType = true;
+					SYSTEM.window.code.selectedCodeLocation = undefined;
 					document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedInitialCode;
 				});
 				Button({
@@ -570,6 +572,7 @@ function codeTabView() {
 					primaryColor: color(120),
 				}, () => {
 					SYSTEM.window.code.codeType = false;
+					SYSTEM.window.code.selectedCodeLocation = undefined;
 					document.getElementById('codeWindow').value = SYSTEM.window.code.unsavedUpdateCode;
 				});
 
