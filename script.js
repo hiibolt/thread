@@ -23,7 +23,7 @@ var SYSTEM = {
 	window: {
 		debug: {
 			x: undefined,
-			y: undefined,
+			y: undefined, 
 			w: undefined,
 			h: undefined,
 			msgs: [],
