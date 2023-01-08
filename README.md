@@ -49,7 +49,7 @@ New code blocks can be inferred with line breaks:
 - Get Internal Variable: [ "getIntVar", "<name\>" ]
 	- Returns an internal variable locked specifically to the entity.
   - The name MUST be a string.
-  - Shorthand: i_<name\> (IE: i_x)
+  - Shorthand: i_?"<name\>" (IE: i_?"x")
 ### Entity Modification:
 - Set Entity Position: [ "setPos", x value, y value, z value ]
 - Set Entity Rotation: [ "setRot", x value, y value, z value ]
