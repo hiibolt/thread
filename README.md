@@ -1,4 +1,4 @@
-# Unofficial language, compiler, and engine! WIP.
+# Unofficial language, compiler, and engine!
 ## A personal labor of love project of mine, entailing...
 - Extreme optimization cases
 - RegEX (A lot)
