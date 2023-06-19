@@ -3,10 +3,10 @@ function compile(inputCode) {
 	var TEMP = inputCode.split('\n').filter((a) => a).join('~');
 
 	//Substitute shorthands
-	TEMP = TEMP.replace(/i_\?"(\w+)"/g, '["getIntVar","$1"]');
-	TEMP = TEMP.replace(/g_\?"(\w+)"/g, '["getGloVar","$1"]');
-	TEMP = TEMP.replace(/i_=/g, ',"i_=",');
-	TEMP = TEMP.replace(/g_=/g, ',"i_=",');
+	TEMP = TEMP.replace(/\\i?"(\w+)"/g, '["getIntVar","$1"]');
+	TEMP = TEMP.replace(/\\g?"(\w+)"/g, '["getGloVar","$1"]');
+	TEMP = TEMP.replace(/\\i=/g, ',"\\i=",');
+	TEMP = TEMP.replace(/\\g=/g, ',"\\i=",');
 	TEMP = TEMP.replace(/\._&&/g, ',"._&&",');
 	TEMP = TEMP.replace(/\._\+/g, ',"._+",');
 	TEMP = TEMP.replace(/\._\-/g, ',"._-",');
@@ -25,12 +25,12 @@ function compile(inputCode) {
 				scan(code[i]);
 			}
 			switch (code[i]) {
-				case "i_=":
+				case "\\i=":
 					var replaceWith = ["setIntVar", code[i - 1], code[i + 1]];
 					code.splice(i - 1, 3, replaceWith);
 					i = 0;
 					break;
-				case "g_=":
+				case "\\g=":
 					var replaceWith = ["setGloVar", code[i - 1], code[i + 1]];
 					code.splice(i - 1, 3, replaceWith);
 					i = 0;
